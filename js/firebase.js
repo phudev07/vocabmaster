@@ -220,6 +220,48 @@ const FirebaseDB = {
         }
     },
 
+    // Start real-time listeners
+    startRealtimeSync() {
+        if (!this.initialized) return;
+        
+        const { collection, onSnapshot } = this.firestore;
+        
+        // Listen for topics changes
+        this.topicsUnsubscribe = onSnapshot(collection(db, 'topics'), (snapshot) => {
+            const topics = [];
+            snapshot.forEach(doc => {
+                topics.push({ id: doc.id, ...doc.data() });
+            });
+            localStorage.setItem(Storage.KEYS.TOPICS, JSON.stringify(topics));
+            console.log('Topics updated in real-time:', topics.length);
+            // Re-render UI
+            Topics.render();
+        });
+        
+        // Listen for words changes
+        this.wordsUnsubscribe = onSnapshot(collection(db, 'words'), (snapshot) => {
+            const words = [];
+            snapshot.forEach(doc => {
+                words.push({ id: doc.id, ...doc.data() });
+            });
+            localStorage.setItem(Storage.KEYS.WORDS, JSON.stringify(words));
+            console.log('Words updated in real-time:', words.length);
+            // Re-render UI based on current view
+            Stats.render();
+            if (Topics.currentTopicId) {
+                Vocabulary.renderTopicWords(Topics.currentTopicId);
+            }
+        });
+        
+        console.log('Real-time sync started');
+    },
+    
+    // Stop real-time listeners (cleanup)
+    stopRealtimeSync() {
+        if (this.topicsUnsubscribe) this.topicsUnsubscribe();
+        if (this.wordsUnsubscribe) this.wordsUnsubscribe();
+    },
+
     async syncToCloud() {
         if (!this.initialized) return;
         

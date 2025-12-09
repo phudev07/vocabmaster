@@ -79,6 +79,13 @@ const Stats = {
         // Sync to Firebase
         FirebaseDB.saveStats(stats);
         
+        // Celebrate streak milestones!
+        const milestones = [7, 14, 30, 50, 100, 365];
+        if (milestones.includes(stats.streak)) {
+            App.showConfetti();
+            App.showToast(`🎉 Chúc mừng! Bạn đã đạt ${stats.streak} ngày liên tiếp!`, 'success');
+        }
+        
         return stats;
     },
 

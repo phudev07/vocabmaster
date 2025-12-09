@@ -16,8 +16,10 @@ const App = {
         // Initialize Firebase first
         try {
             await FirebaseDB.init();
-            // Sync data from cloud
+            // Sync data from cloud (initial fetch)
             await FirebaseDB.syncFromCloud();
+            // Start real-time sync for live updates
+            FirebaseDB.startRealtimeSync();
             this.showToast('Đã kết nối Firebase ☁️', 'success');
         } catch (error) {
             console.log('Firebase not available, using local storage');
@@ -71,6 +73,39 @@ const App = {
         document.getElementById('menuToggle').addEventListener('click', () => {
             document.getElementById('sidebar').classList.toggle('open');
         });
+
+        // Notification button
+        const notifyBtn = document.getElementById('notifyBtn');
+        if (notifyBtn) {
+            // Show button if notifications are supported
+            if ('Notification' in window) {
+                notifyBtn.style.display = 'flex';
+                // Update button state
+                if (Notification.permission === 'granted') {
+                    notifyBtn.textContent = '🔔';
+                    notifyBtn.title = 'Thông báo đã bật';
+                } else {
+                    notifyBtn.textContent = '🔕';
+                    notifyBtn.title = 'Bấm để bật thông báo';
+                }
+            }
+            
+            notifyBtn.addEventListener('click', async () => {
+                if (Notification.permission === 'granted') {
+                    this.showToast('Thông báo đã được bật', 'success');
+                } else {
+                    const granted = await Notifications.requestPermission();
+                    if (granted) {
+                        notifyBtn.textContent = '🔔';
+                        notifyBtn.title = 'Thông báo đã bật';
+                        // Schedule daily reminder
+                        Notifications.scheduleDailyReminder();
+                    } else {
+                        notifyBtn.textContent = '🔕';
+                    }
+                }
+            });
+        }
 
         // Close sidebar when clicking outside (mobile)
         document.addEventListener('click', (e) => {
@@ -211,10 +246,85 @@ const App = {
         document.getElementById('confirmMessage').textContent = message;
         this.deleteCallback = callback;
         document.getElementById('confirmModal').classList.add('active');
+    },
+    
+    // Register Service Worker for PWA
+    registerServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js')
+                .then((registration) => {
+                    console.log('Service Worker registered:', registration.scope);
+                })
+                .catch((error) => {
+                    console.error('Service Worker registration failed:', error);
+                });
+        }
+    },
+    
+    // PWA install prompt
+    deferredPrompt: null,
+    
+    setupPWAInstall() {
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            this.deferredPrompt = e;
+            
+            // Show install button
+            const installBtn = document.getElementById('installBtn');
+            if (installBtn) {
+                installBtn.style.display = 'block';
+                installBtn.addEventListener('click', () => this.installPWA());
+            }
+            
+            console.log('PWA install available');
+        });
+        
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA installed');
+            this.deferredPrompt = null;
+            const installBtn = document.getElementById('installBtn');
+            if (installBtn) installBtn.style.display = 'none';
+        });
+    },
+    
+    async installPWA() {
+        if (!this.deferredPrompt) return;
+        
+        this.deferredPrompt.prompt();
+        const result = await this.deferredPrompt.userChoice;
+        console.log('Install prompt result:', result);
+        this.deferredPrompt = null;
+    },
+    
+    // Show confetti animation for milestone
+    showConfetti() {
+        const container = document.getElementById('toastContainer');
+        const confettiColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD'];
+        
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.cssText = `
+                position: fixed;
+                width: 10px;
+                height: 10px;
+                background: ${confettiColors[Math.floor(Math.random() * confettiColors.length)]};
+                left: ${Math.random() * 100}vw;
+                top: -10px;
+                border-radius: ${Math.random() > 0.5 ? '50%' : '0'};
+                animation: confetti-fall ${2 + Math.random() * 2}s linear forwards;
+                z-index: 9999;
+            `;
+            document.body.appendChild(confetti);
+            
+            setTimeout(() => confetti.remove(), 4000);
+        }
     }
 };
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     App.init();
+    App.registerServiceWorker();
+    App.setupPWAInstall();
 });
