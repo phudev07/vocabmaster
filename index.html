@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ứng dụng học từ vựng tiếng Anh với Spaced Repetition System">
+    <title>VocabMaster - Học Từ Vựng Tiếng Anh</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            <div class="logo">
+                <span class="logo-icon">📚</span>
+                <span class="logo-text">VocabMaster</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="btn-icon" id="syncBtn" aria-label="Đồng bộ" title="Đồng bộ dữ liệu">
+                ☁️
+            </button>
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                <span class="theme-icon-dark">🌙</span>
+                <span class="theme-icon-light">☀️</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Chủ đề</h2>
+            <button class="btn-icon" id="addTopicBtn" aria-label="Thêm chủ đề">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+            </button>
+        </div>
+        <nav class="sidebar-nav">
+            <button class="nav-item active" data-view="dashboard">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Dashboard</span>
+            </button>
+            <button class="nav-item" data-view="all-words">
+                <span class="nav-icon">📖</span>
+                <span class="nav-text">Tất cả từ vựng</span>
+            </button>
+            <button class="nav-item" data-view="review-due">
+                <span class="nav-icon">🔔</span>
+                <span class="nav-text">Cần ôn tập</span>
+                <span class="nav-badge" id="dueBadge">0</span>
+            </button>
+        </nav>
+        <div class="sidebar-divider"></div>
+        <div class="topics-list" id="topicsList">
+            <!-- Topics will be rendered here -->
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <!-- Dashboard View -->
+        <section class="view active" id="dashboardView">
+            <div class="view-header">
+                <h1>Dashboard</h1>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📚</div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statTotalWords">0</span>
+                        <span class="stat-label">Tổng từ vựng</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statMastered">0</span>
+                        <span class="stat-label">Đã thuộc</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📝</div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statLearning">0</span>
+                        <span class="stat-label">Đang học</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="statStreak">0</span>
+                        <span class="stat-label">Ngày liên tiếp</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dashboard-sections">
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h2>⚠️ Từ cần ôn tập hôm nay</h2>
+                        <button class="btn btn-primary" id="startReviewBtn">Ôn tập ngay</button>
+                    </div>
+                    <div class="due-words-preview" id="dueWordsPreview">
+                        <p class="empty-state">Không có từ nào cần ôn tập</p>
+                    </div>
+                </div>
+                
+                <div class="dashboard-section">
+                    <div class="section-header">
+                        <h2>📈 Tiến độ tuần này</h2>
+                    </div>
+                    <div class="weekly-chart" id="weeklyChart">
+                        <!-- Chart will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Topic View -->
+        <section class="view" id="topicView">
+            <div class="view-header">
+                <div class="view-title">
+                    <span class="topic-icon" id="topicViewIcon">📁</span>
+                    <h1 id="topicViewTitle">Chủ đề</h1>
+                </div>
+                <div class="view-actions">
+                    <button class="btn btn-secondary" id="reviewTopicBtn">
+                        <span>📖</span> Ôn tập
+                    </button>
+                    <button class="btn btn-secondary" id="testTopicBtn">
+                        <span>✍️</span> Kiểm tra
+                    </button>
+                    <button class="btn btn-primary" id="addWordBtn">
+                        <span>+</span> Thêm từ
+                    </button>
+                </div>
+            </div>
+            <div class="words-list" id="wordsList">
+                <!-- Words will be rendered here -->
+            </div>
+        </section>
+
+        <!-- All Words View -->
+        <section class="view" id="allWordsView">
+            <div class="view-header">
+                <h1>Tất cả từ vựng</h1>
+                <div class="view-actions">
+                    <button class="btn btn-secondary" id="reviewAllBtn">
+                        <span>📖</span> Ôn tập tất cả
+                    </button>
+                    <button class="btn btn-secondary" id="testAllBtn">
+                        <span>✍️</span> Kiểm tra tất cả
+                    </button>
+                </div>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Tìm kiếm từ vựng...">
+            </div>
+            <div class="words-list" id="allWordsList">
+                <!-- All words will be rendered here -->
+            </div>
+        </section>
+
+        <!-- Review Due View -->
+        <section class="view" id="reviewDueView">
+            <div class="view-header">
+                <h1>🔔 Từ cần ôn tập</h1>
+                <div class="view-actions">
+                    <button class="btn btn-primary" id="startDueReviewBtn">Bắt đầu ôn tập</button>
+                </div>
+            </div>
+            <div class="words-list" id="dueWordsList">
+                <!-- Due words will be rendered here -->
+            </div>
+        </section>
+
+        <!-- Review Mode -->
+        <section class="view" id="reviewView">
+            <div class="review-container">
+                <div class="review-progress">
+                    <span id="reviewProgress">0 / 0</span>
+                    <button class="btn-icon" id="closeReviewBtn" aria-label="Đóng">✕</button>
+                </div>
+                <div class="flashcard" id="flashcard">
+                    <div class="flashcard-inner">
+                        <div class="flashcard-front">
+                            <button class="speak-btn" id="speakBtn" aria-label="Phát âm">🔊</button>
+                            <p class="flashcard-word" id="flashcardWord">Word</p>
+                        </div>
+                        <div class="flashcard-back">
+                            <p class="flashcard-meaning" id="flashcardMeaning">Nghĩa</p>
+                        </div>
+                    </div>
+                </div>
+                <p class="flashcard-hint">Click để lật thẻ</p>
+                <div class="review-actions">
+                    <button class="btn btn-secondary" id="prevCardBtn">← Trước</button>
+                    <button class="btn btn-primary" id="nextCardBtn">Tiếp →</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Test Mode -->
+        <section class="view" id="testView">
+            <div class="test-container">
+                <div class="test-progress">
+                    <span id="testProgress">0 / 0</span>
+                    <span id="testScore">Đúng: 0</span>
+                    <button class="btn-icon" id="closeTestBtn" aria-label="Đóng">✕</button>
+                </div>
+                <div class="test-card">
+                    <p class="test-meaning" id="testMeaning">Nghĩa tiếng Việt</p>
+                    <input type="text" class="test-input" id="testInput" placeholder="Nhập từ tiếng Anh..." autocomplete="off">
+                    <div class="test-feedback" id="testFeedback"></div>
+                </div>
+                <div class="test-actions">
+                    <button class="btn btn-secondary" id="skipWordBtn">Bỏ qua</button>
+                    <button class="btn btn-primary" id="checkAnswerBtn">Kiểm tra</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Test Result -->
+        <section class="view" id="testResultView">
+            <div class="result-container">
+                <div class="result-icon">🎉</div>
+                <h1>Kết quả kiểm tra</h1>
+                <div class="result-stats">
+                    <div class="result-stat">
+                        <span class="result-value" id="resultCorrect">0</span>
+                        <span class="result-label">Đúng</span>
+                    </div>
+                    <div class="result-stat">
+                        <span class="result-value" id="resultWrong">0</span>
+                        <span class="result-label">Sai</span>
+                    </div>
+                    <div class="result-stat">
+                        <span class="result-value" id="resultAccuracy">0%</span>
+                        <span class="result-label">Tỷ lệ</span>
+                    </div>
+                </div>
+                <div class="wrong-words" id="wrongWordsList">
+                    <!-- Wrong words will be shown here -->
+                </div>
+                <button class="btn btn-primary" id="backToDashboardBtn">Về Dashboard</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal: Add/Edit Topic -->
+    <div class="modal" id="topicModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="topicModalTitle">Thêm chủ đề</h2>
+                <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
+            </div>
+            <form id="topicForm">
+                <div class="form-group">
+                    <label for="topicName">Tên chủ đề</label>
+                    <input type="text" id="topicName" required placeholder="VD: Động vật, Thức ăn...">
+                </div>
+                <div class="form-group">
+                    <label>Chọn icon</label>
+                    <div class="icon-picker" id="iconPicker">
+                        <button type="button" class="icon-option selected" data-icon="📁">📁</button>
+                        <button type="button" class="icon-option" data-icon="📚">📚</button>
+                        <button type="button" class="icon-option" data-icon="🎓">🎓</button>
+                        <button type="button" class="icon-option" data-icon="💼">💼</button>
+                        <button type="button" class="icon-option" data-icon="🏠">🏠</button>
+                        <button type="button" class="icon-option" data-icon="🍔">🍔</button>
+                        <button type="button" class="icon-option" data-icon="🐶">🐶</button>
+                        <button type="button" class="icon-option" data-icon="✈️">✈️</button>
+                        <button type="button" class="icon-option" data-icon="🎵">🎵</button>
+                        <button type="button" class="icon-option" data-icon="⚽">⚽</button>
+                        <button type="button" class="icon-option" data-icon="🌍">🌍</button>
+                        <button type="button" class="icon-option" data-icon="💻">💻</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Chọn màu</label>
+                    <div class="color-picker" id="colorPicker">
+                        <button type="button" class="color-option selected" data-color="#FF6B6B" style="background:#FF6B6B"></button>
+                        <button type="button" class="color-option" data-color="#4ECDC4" style="background:#4ECDC4"></button>
+                        <button type="button" class="color-option" data-color="#45B7D1" style="background:#45B7D1"></button>
+                        <button type="button" class="color-option" data-color="#96CEB4" style="background:#96CEB4"></button>
+                        <button type="button" class="color-option" data-color="#FFEAA7" style="background:#FFEAA7"></button>
+                        <button type="button" class="color-option" data-color="#DDA0DD" style="background:#DDA0DD"></button>
+                        <button type="button" class="color-option" data-color="#98D8C8" style="background:#98D8C8"></button>
+                        <button type="button" class="color-option" data-color="#F7DC6F" style="background:#F7DC6F"></button>
+                    </div>
+                </div>
+                <input type="hidden" id="topicId">
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary modal-close">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Add/Edit Word -->
+    <div class="modal" id="wordModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="wordModalTitle">Thêm từ vựng</h2>
+                <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
+            </div>
+            <form id="wordForm">
+                <div class="form-group">
+                    <label for="wordEnglish">Tiếng Anh</label>
+                    <input type="text" id="wordEnglish" required placeholder="VD: apple">
+                </div>
+                <div class="form-group">
+                    <label for="wordVietnamese">Tiếng Việt</label>
+                    <input type="text" id="wordVietnamese" required placeholder="VD: quả táo">
+                </div>
+                <input type="hidden" id="wordId">
+                <input type="hidden" id="wordTopicId">
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary modal-close">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Test/Review Config -->
+    <div class="modal" id="configModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="configModalTitle">Cấu hình</h2>
+                <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
+            </div>
+            <form id="configForm">
+                <div class="form-group">
+                    <label>Phạm vi</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="scope" value="topic" checked>
+                            <span>Chủ đề hiện tại</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="scope" value="all">
+                            <span>Tất cả từ vựng</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Số lượng từ</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="count" value="all" checked>
+                            <span>Tất cả (<span id="totalWordsCount">0</span> từ)</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="count" value="random">
+                            <span>Random:</span>
+                            <input type="number" id="randomCount" min="1" value="10" class="inline-input">
+                            <span>từ</span>
+                        </label>
+                    </div>
+                </div>
+                <input type="hidden" id="configMode">
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary modal-close">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Bắt đầu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Confirm Delete -->
+    <div class="modal" id="confirmModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Xác nhận xóa</h2>
+                <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
+            </div>
+            <p id="confirmMessage">Bạn có chắc chắn muốn xóa?</p>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary modal-close">Hủy</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Xóa</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Scripts -->
+    <script src="js/storage.js"></script>
+    <script src="js/firebase.js"></script>
+    <script src="js/srs.js"></script>
+    <script src="js/speech.js"></script>
+    <script src="js/stats.js"></script>
+    <script src="js/topics.js"></script>
+    <script src="js/vocabulary.js"></script>
+    <script src="js/review.js"></script>
+    <script src="js/test.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
