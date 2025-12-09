@@ -75,6 +75,10 @@ const Stats = {
         stats.weeklyProgress[dayOfWeek] += wordsStudied;
         
         Storage.saveStats(stats);
+        
+        // Sync to Firebase
+        FirebaseDB.saveStats(stats);
+        
         return stats;
     },
 

@@ -170,6 +170,39 @@ const FirebaseDB = {
         }
     },
 
+    // ==================== Stats ====================
+    async getStats() {
+        if (!this.initialized) return Storage.getStats();
+        
+        try {
+            const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const docRef = doc(db, 'settings', 'stats');
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                const stats = docSnap.data();
+                localStorage.setItem(Storage.KEYS.STATS, JSON.stringify(stats));
+                return stats;
+            }
+            return Storage.getStats();
+        } catch (error) {
+            console.error('Get stats error:', error);
+            return Storage.getStats();
+        }
+    },
+
+    async saveStats(stats) {
+        if (!this.initialized) return;
+        
+        try {
+            const { doc, setDoc } = this.firestore;
+            await setDoc(doc(db, 'settings', 'stats'), stats);
+            console.log('Stats saved to cloud');
+        } catch (error) {
+            console.error('Save stats error:', error);
+        }
+    },
+
     // ==================== Sync ====================
     async syncFromCloud() {
         if (!this.initialized) return;
@@ -178,6 +211,7 @@ const FirebaseDB = {
             // Fetch all data from cloud
             await this.getTopics();
             await this.getAllWords();
+            await this.getStats();
             console.log('Synced from cloud');
         } catch (error) {
             console.error('Sync error:', error);
@@ -201,6 +235,10 @@ const FirebaseDB = {
             for (const word of words) {
                 await setDoc(doc(db, 'words', word.id), word);
             }
+            
+            // Sync stats
+            const stats = Storage.getStats();
+            await setDoc(doc(db, 'settings', 'stats'), stats);
             
             console.log('Synced to cloud');
             App.showToast('Đã đồng bộ lên cloud', 'success');
