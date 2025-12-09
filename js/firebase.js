@@ -1,6 +1,5 @@
 /**
- * Firebase Module - Shared cloud storage with Firestore
- * All users share the same data (no user separation)
+ * Firebase Module - User-specific cloud storage with Firestore
  */
 
 // Firebase configuration
@@ -21,6 +20,21 @@ let db = null;
 const FirebaseDB = {
     initialized: false,
     firestore: null,
+    userId: null,
+    
+    // Set user ID (called after login)
+    setUserId(uid) {
+        this.userId = uid;
+        console.log('FirebaseDB userId set:', uid);
+    },
+    
+    // Get collection path (user-specific if logged in)
+    getPath(collectionName) {
+        if (this.userId) {
+            return `users/${this.userId}/${collectionName}`;
+        }
+        return collectionName; // Fallback to shared (for backwards compatibility)
+    },
     
     // Initialize Firebase
     async init() {
@@ -37,7 +51,7 @@ const FirebaseDB = {
             this.firestore = { collection, doc, getDocs, getDoc, setDoc, deleteDoc, onSnapshot };
             
             this.initialized = true;
-            console.log('Firebase initialized - shared mode');
+            console.log('Firebase initialized');
             return true;
         } catch (error) {
             console.error('Firebase init error:', error);
@@ -51,7 +65,7 @@ const FirebaseDB = {
         
         try {
             const { collection, getDocs } = this.firestore;
-            const snapshot = await getDocs(collection(db, 'topics'));
+            const snapshot = await getDocs(collection(db, this.getPath('topics')));
             const topics = [];
             snapshot.forEach(doc => {
                 topics.push({ id: doc.id, ...doc.data() });
@@ -73,7 +87,7 @@ const FirebaseDB = {
         
         try {
             const { doc, setDoc } = this.firestore;
-            await setDoc(doc(db, 'topics', topic.id), topic);
+            await setDoc(doc(db, this.getPath('topics'), topic.id), topic);
             console.log('Topic saved to cloud:', topic.id);
         } catch (error) {
             console.error('Save topic error:', error);
@@ -89,13 +103,13 @@ const FirebaseDB = {
         
         try {
             const { doc, deleteDoc, collection, getDocs } = this.firestore;
-            await deleteDoc(doc(db, 'topics', topicId));
+            await deleteDoc(doc(db, this.getPath('topics'), topicId));
             
             // Delete all words in topic
-            const snapshot = await getDocs(collection(db, 'words'));
+            const snapshot = await getDocs(collection(db, this.getPath('words')));
             snapshot.forEach(async (docSnap) => {
                 if (docSnap.data().topicId === topicId) {
-                    await deleteDoc(doc(db, 'words', docSnap.id));
+                    await deleteDoc(doc(db, this.getPath('words'), docSnap.id));
                 }
             });
             console.log('Topic deleted from cloud:', topicId);
@@ -110,7 +124,7 @@ const FirebaseDB = {
         
         try {
             const { collection, getDocs } = this.firestore;
-            const snapshot = await getDocs(collection(db, 'words'));
+            const snapshot = await getDocs(collection(db, this.getPath('words')));
             const words = [];
             snapshot.forEach(doc => {
                 words.push({ id: doc.id, ...doc.data() });
@@ -132,7 +146,7 @@ const FirebaseDB = {
         
         try {
             const { doc, setDoc } = this.firestore;
-            await setDoc(doc(db, 'words', word.id), word);
+            await setDoc(doc(db, this.getPath('words'), word.id), word);
             console.log('Word saved to cloud:', word.id);
         } catch (error) {
             console.error('Save word error:', error);
@@ -148,7 +162,7 @@ const FirebaseDB = {
         
         try {
             const { doc, setDoc } = this.firestore;
-            await setDoc(doc(db, 'words', word.id), word);
+            await setDoc(doc(db, this.getPath('words'), word.id), word);
         } catch (error) {
             console.error('Update word error:', error);
         }
@@ -163,7 +177,7 @@ const FirebaseDB = {
         
         try {
             const { doc, deleteDoc } = this.firestore;
-            await deleteDoc(doc(db, 'words', wordId));
+            await deleteDoc(doc(db, this.getPath('words'), wordId));
             console.log('Word deleted from cloud:', wordId);
         } catch (error) {
             console.error('Delete word error:', error);
@@ -176,7 +190,7 @@ const FirebaseDB = {
         
         try {
             const { doc, getDoc } = this.firestore;
-            const docRef = doc(db, 'settings', 'stats');
+            const docRef = doc(db, this.getPath('settings'), 'stats');
             const docSnap = await getDoc(docRef);
             
             if (docSnap.exists()) {
@@ -198,7 +212,7 @@ const FirebaseDB = {
         
         try {
             const { doc, setDoc } = this.firestore;
-            await setDoc(doc(db, 'settings', 'stats'), stats);
+            await setDoc(doc(db, this.getPath('settings'), 'stats'), stats);
             console.log('Stats saved to cloud');
         } catch (error) {
             console.error('Save stats error:', error);
@@ -227,7 +241,7 @@ const FirebaseDB = {
         const { collection, onSnapshot } = this.firestore;
         
         // Listen for topics changes
-        this.topicsUnsubscribe = onSnapshot(collection(db, 'topics'), (snapshot) => {
+        this.topicsUnsubscribe = onSnapshot(collection(db, this.getPath('topics')), (snapshot) => {
             const topics = [];
             snapshot.forEach(doc => {
                 topics.push({ id: doc.id, ...doc.data() });
@@ -239,7 +253,7 @@ const FirebaseDB = {
         });
         
         // Listen for words changes
-        this.wordsUnsubscribe = onSnapshot(collection(db, 'words'), (snapshot) => {
+        this.wordsUnsubscribe = onSnapshot(collection(db, this.getPath('words')), (snapshot) => {
             const words = [];
             snapshot.forEach(doc => {
                 words.push({ id: doc.id, ...doc.data() });

@@ -16,13 +16,20 @@ const App = {
         // Initialize Firebase first
         try {
             await FirebaseDB.init();
-            // Sync data from cloud (initial fetch)
-            await FirebaseDB.syncFromCloud();
-            // Start real-time sync for live updates
-            FirebaseDB.startRealtimeSync();
-            this.showToast('Đã kết nối Firebase ☁️', 'success');
         } catch (error) {
             console.log('Firebase not available, using local storage');
+        }
+        
+        // Initialize Auth (will sync data after login)
+        try {
+            await Auth.init();
+            if (Auth.isLoggedIn()) {
+                this.showToast(`Xin chào, ${Auth.user.displayName}!`, 'success');
+            } else {
+                this.showToast('Vui lòng đăng nhập để đồng bộ', 'warning');
+            }
+        } catch (error) {
+            console.log('Auth not available');
         }
         
         // Initialize modules
@@ -73,6 +80,22 @@ const App = {
         document.getElementById('menuToggle').addEventListener('click', () => {
             document.getElementById('sidebar').classList.toggle('open');
         });
+
+        // Login button
+        const loginBtn = document.getElementById('loginBtn');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', async () => {
+                await Auth.signInWithGoogle();
+            });
+        }
+        
+        // Logout button
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                await Auth.signOut();
+            });
+        }
 
         // Notification button
         const notifyBtn = document.getElementById('notifyBtn');
@@ -246,6 +269,73 @@ const App = {
         document.getElementById('confirmMessage').textContent = message;
         this.deleteCallback = callback;
         document.getElementById('confirmModal').classList.add('active');
+    },
+    
+    // Show profile modal
+    showProfileModal() {
+        if (!Auth.isLoggedIn()) {
+            this.showToast('Vui lòng đăng nhập', 'warning');
+            return;
+        }
+        
+        const user = Auth.user;
+        const stats = Stats.calculate();
+        
+        // Populate user info
+        document.getElementById('profileAvatar').src = user.photoURL || '';
+        document.getElementById('profileName').textContent = user.displayName || 'Người dùng';
+        document.getElementById('profileEmail').textContent = user.email || '';
+        
+        // Populate stats
+        document.getElementById('profileTotalWords').textContent = stats.totalWords;
+        document.getElementById('profileMastered').textContent = stats.masteredWords;
+        document.getElementById('profileStreak').textContent = stats.streak;
+        
+        // Calculate level and XP
+        const xp = stats.totalWords * 10 + stats.masteredWords * 50 + stats.streak * 5;
+        const levels = [
+            { level: 1, name: 'Người học mới', minXP: 0 },
+            { level: 2, name: 'Học viên', minXP: 100 },
+            { level: 3, name: 'Sinh viên chăm chỉ', minXP: 300 },
+            { level: 4, name: 'Thành thạo', minXP: 600 },
+            { level: 5, name: 'Chuyên gia', minXP: 1000 },
+            { level: 6, name: 'Cao thủ', minXP: 2000 },
+            { level: 7, name: 'Bậc thầy', minXP: 5000 }
+        ];
+        
+        let currentLevel = levels[0];
+        let nextLevel = levels[1];
+        for (let i = levels.length - 1; i >= 0; i--) {
+            if (xp >= levels[i].minXP) {
+                currentLevel = levels[i];
+                nextLevel = levels[i + 1] || levels[i];
+                break;
+            }
+        }
+        
+        document.getElementById('profileLevel').textContent = `Cấp ${currentLevel.level}: ${currentLevel.name}`;
+        document.getElementById('profileXP').textContent = `${xp} XP`;
+        
+        // Calculate level progress
+        const progressXP = xp - currentLevel.minXP;
+        const neededXP = nextLevel.minXP - currentLevel.minXP;
+        const progress = neededXP > 0 ? Math.min((progressXP / neededXP) * 100, 100) : 100;
+        document.getElementById('profileLevelFill').style.width = `${progress}%`;
+        
+        // Usage stats
+        const joinDate = user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString('vi-VN') : '--';
+        document.getElementById('profileJoinDate').textContent = joinDate;
+        document.getElementById('profileTestCount').textContent = Storage.getStats().testCount || 0;
+        document.getElementById('profileAccuracy').textContent = `${Stats.getAccuracyRate()}%`;
+        
+        // Show modal
+        document.getElementById('profileModal').classList.add('active');
+        
+        // Logout button handler
+        document.getElementById('profileLogoutBtn').onclick = async () => {
+            document.getElementById('profileModal').classList.remove('active');
+            await Auth.signOut();
+        };
     },
     
     // Register Service Worker for PWA

@@ -27,6 +27,15 @@
             </div>
         </div>
         <div class="header-right">
+            <!-- Login/User Area -->
+            <button id="loginBtn" class="btn btn-primary btn-sm" style="padding: 0.5rem 1rem;">
+                🔵 Đăng nhập
+            </button>
+            <div id="userInfo" class="user-info" style="display: none; cursor: pointer;" onclick="App.showProfileModal()">
+                <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
+                <span id="userName" class="user-name"></span>
+            </div>
+            
             <button class="btn-icon" id="syncBtn" aria-label="Đồng bộ" title="Đồng bộ dữ liệu">
                 ☁️
             </button>
@@ -401,12 +410,75 @@
         </div>
     </div>
 
+    <!-- Modal: User Profile -->
+    <div class="modal" id="profileModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Tài khoản</h2>
+                <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
+            </div>
+            <div class="profile-content">
+                <!-- User Info -->
+                <div class="profile-user">
+                    <img id="profileAvatar" class="profile-avatar" src="" alt="Avatar">
+                    <div class="profile-details">
+                        <h3 id="profileName">Người dùng</h3>
+                        <p id="profileEmail">email@example.com</p>
+                    </div>
+                </div>
+                
+                <!-- Stats -->
+                <div class="profile-stats">
+                    <div class="profile-stat">
+                        <span class="profile-stat-value" id="profileTotalWords">0</span>
+                        <span class="profile-stat-label">Tổng từ</span>
+                    </div>
+                    <div class="profile-stat">
+                        <span class="profile-stat-value" id="profileMastered">0</span>
+                        <span class="profile-stat-label">Đã thuộc</span>
+                    </div>
+                    <div class="profile-stat">
+                        <span class="profile-stat-value" id="profileStreak">0</span>
+                        <span class="profile-stat-label">Chuỗi ngày</span>
+                    </div>
+                </div>
+                
+                <!-- Level Progress -->
+                <div class="profile-level">
+                    <div class="level-header">
+                        <span id="profileLevel">Cấp 1: Người học mới</span>
+                        <span id="profileXP">0 XP</span>
+                    </div>
+                    <div class="level-bar">
+                        <div class="level-fill" id="profileLevelFill" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <!-- History Summary -->
+                <div class="profile-section">
+                    <h4>📊 Thống kê sử dụng</h4>
+                    <ul class="profile-history">
+                        <li>Ngày tham gia: <span id="profileJoinDate">--</span></li>
+                        <li>Tổng bài kiểm tra: <span id="profileTestCount">0</span></li>
+                        <li>Độ chính xác: <span id="profileAccuracy">0%</span></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary modal-close">Đóng</button>
+                <button type="button" class="btn btn-danger" id="profileLogoutBtn">🚪 Đăng xuất</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div class="toast-container" id="toastContainer"></div>
 
     <!-- Scripts -->
     <script src="js/storage.js"></script>
     <script src="js/firebase.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/srs.js"></script>
     <script src="js/speech.js"></script>
     <script src="js/stats.js"></script>
