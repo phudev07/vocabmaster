@@ -27,14 +27,14 @@ const FirebaseDB = {
         try {
             // Import Firebase modules
             const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-            const { getFirestore, collection, doc, getDocs, setDoc, deleteDoc, onSnapshot } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const { getFirestore, collection, doc, getDocs, getDoc, setDoc, deleteDoc, onSnapshot } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
             
             // Initialize app
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             
             // Store Firestore functions
-            this.firestore = { collection, doc, getDocs, setDoc, deleteDoc, onSnapshot };
+            this.firestore = { collection, doc, getDocs, getDoc, setDoc, deleteDoc, onSnapshot };
             
             this.initialized = true;
             console.log('Firebase initialized - shared mode');
@@ -175,15 +175,17 @@ const FirebaseDB = {
         if (!this.initialized) return Storage.getStats();
         
         try {
-            const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const { doc, getDoc } = this.firestore;
             const docRef = doc(db, 'settings', 'stats');
             const docSnap = await getDoc(docRef);
             
             if (docSnap.exists()) {
                 const stats = docSnap.data();
+                console.log('Stats from cloud:', stats);
                 localStorage.setItem(Storage.KEYS.STATS, JSON.stringify(stats));
                 return stats;
             }
+            console.log('No stats in cloud, using local');
             return Storage.getStats();
         } catch (error) {
             console.error('Get stats error:', error);
