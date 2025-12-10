@@ -369,16 +369,17 @@ const App = {
         const freezes = localStats.freezesRemaining !== undefined ? localStats.freezesRemaining : 3;
         document.getElementById('profileFreezes').textContent = `❄️${freezes}`;
         
-        // Calculate level and XP
-        const xp = stats.totalWords * 10 + stats.masteredWords * 50 + stats.streak * 5;
+        // Calculate level and XP (include bonusXP from admin)
+        const bonusXP = localStats.bonusXP || 0;
+        const xp = stats.totalWords * 10 + stats.masteredWords * 50 + stats.streak * 5 + bonusXP;
         const levels = [
             { level: 1, name: 'Người học mới', minXP: 0 },
-            { level: 2, name: 'Học viên', minXP: 100 },
-            { level: 3, name: 'Sinh viên chăm chỉ', minXP: 300 },
-            { level: 4, name: 'Thành thạo', minXP: 600 },
-            { level: 5, name: 'Chuyên gia', minXP: 1000 },
-            { level: 6, name: 'Cao thủ', minXP: 2000 },
-            { level: 7, name: 'Bậc thầy', minXP: 5000 }
+            { level: 2, name: 'Học viên', minXP: 2000 },
+            { level: 3, name: 'Sinh viên chăm chỉ', minXP: 5000 },
+            { level: 4, name: 'Thành thạo', minXP: 10000 },
+            { level: 5, name: 'Chuyên gia', minXP: 20000 },
+            { level: 6, name: 'Cao thủ', minXP: 40000 },
+            { level: 7, name: 'Bậc thầy', minXP: 80000 }
         ];
         
         let currentLevel = levels[0];

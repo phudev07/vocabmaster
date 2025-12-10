@@ -3,28 +3,56 @@
  */
 
 const Achievements = {
-    // Badge definitions
+    // Badge definitions - synced with level system
     badges: [
         {
             id: 'newcomer',
             name: 'Người mới',
             icon: '🌱',
-            description: 'Thêm từ vựng đầu tiên',
-            condition: (stats) => stats.totalWords >= 1
+            description: 'Bắt đầu học (Cấp 1)',
+            condition: (stats) => stats.xp >= 0
         },
         {
             id: 'student',
             name: 'Học viên',
             icon: '📖',
-            description: 'Học 50 từ vựng',
-            condition: (stats) => stats.totalWords >= 50
+            description: 'Đạt 2000 XP (Cấp 2)',
+            condition: (stats) => stats.xp >= 2000
+        },
+        {
+            id: 'hardworker',
+            name: 'Sinh viên chăm chỉ',
+            icon: '📚',
+            description: 'Đạt 5000 XP (Cấp 3)',
+            condition: (stats) => stats.xp >= 5000
+        },
+        {
+            id: 'proficient',
+            name: 'Thành thạo',
+            icon: '🎯',
+            description: 'Đạt 10000 XP (Cấp 4)',
+            condition: (stats) => stats.xp >= 10000
+        },
+        {
+            id: 'expert',
+            name: 'Chuyên gia',
+            icon: '🎓',
+            description: 'Đạt 20000 XP (Cấp 5)',
+            condition: (stats) => stats.xp >= 20000
         },
         {
             id: 'master',
-            name: 'Thạc sĩ',
-            icon: '🎓',
-            description: 'Học 200 từ vựng',
-            condition: (stats) => stats.totalWords >= 200
+            name: 'Cao thủ',
+            icon: '⭐',
+            description: 'Đạt 40000 XP (Cấp 6)',
+            condition: (stats) => stats.xp >= 40000
+        },
+        {
+            id: 'grandmaster',
+            name: 'Bậc thầy',
+            icon: '👑',
+            description: 'Đạt 80000 XP (Cấp 7)',
+            condition: (stats) => stats.xp >= 80000
         },
         {
             id: 'week_fire',
@@ -41,28 +69,11 @@ const Achievements = {
             condition: (stats) => stats.streak >= 30
         },
         {
-            id: 'star',
-            name: 'Ngôi sao',
-            icon: '⭐',
-            description: 'Thuộc 100 từ vựng',
-            condition: (stats) => stats.masteredWords >= 100
-        },
-        {
             id: 'champion',
             name: 'Vô địch',
             icon: '🏆',
             description: '100% đúng trong 1 bài test',
             condition: (stats) => stats.perfectTests >= 1
-        },
-        {
-            id: 'grandmaster',
-            name: 'Bậc thầy',
-            icon: '👑',
-            description: 'Level 7 và 1000 từ',
-            condition: (stats) => {
-                const xp = stats.totalWords * 10 + stats.masteredWords * 50 + stats.streak * 5;
-                return xp >= 5000 && stats.totalWords >= 1000;
-            }
         }
     ],
     
@@ -86,10 +97,19 @@ const Achievements = {
         const localStats = Storage.getStats();
         const words = Storage.getAllWords();
         
+        const totalWords = words.length;
+        const masteredWords = words.filter(w => w.level >= 5).length;
+        const streak = localStats.streak || 0;
+        
+        // Calculate XP same as level system (include bonusXP)
+        const bonusXP = localStats.bonusXP || 0;
+        const xp = totalWords * 10 + masteredWords * 50 + streak * 5 + bonusXP;
+        
         return {
-            totalWords: words.length,
-            masteredWords: words.filter(w => w.level >= 5).length,
-            streak: localStats.streak || 0,
+            totalWords,
+            masteredWords,
+            streak,
+            xp,
             perfectTests: localStats.perfectTests || 0,
             testCount: localStats.testCount || 0
         };

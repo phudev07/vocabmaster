@@ -43,15 +43,18 @@ const Leaderboard = {
         if (!Auth.isLoggedIn() || !FirebaseDB.initialized) return;
         
         try {
-            const { doc, setDoc } = FirebaseDB.firestore;
+            const { doc, setDoc, getDoc } = FirebaseDB.firestore;
             const stats = Stats.calculate();
-            const xp = stats.totalWords * 10 + stats.masteredWords * 50 + stats.streak * 5;
+            const localStats = Storage.getStats();
+            const bonusXP = localStats.bonusXP || 0;
+            const xp = stats.totalWords * 10 + stats.masteredWords * 50 + stats.streak * 5 + bonusXP;
             
             await setDoc(doc(db, 'users', Auth.user.uid), {
                 displayName: Auth.user.displayName,
                 photoURL: Auth.user.photoURL,
                 email: Auth.user.email,
                 xp: xp,
+                bonusXP: bonusXP,
                 totalWords: stats.totalWords,
                 masteredWords: stats.masteredWords,
                 streak: stats.streak,

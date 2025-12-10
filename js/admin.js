@@ -335,7 +335,7 @@ const Admin = {
         document.getElementById('editUserName').value = user.displayName || '';
         document.getElementById('editUserXP').value = user.xp || 0;
         document.getElementById('editUserStreak').value = user.streak || 0;
-        document.getElementById('editUserFreeze').value = user.freezeCount || 0;
+        document.getElementById('editUserFreeze').value = user.freezesRemaining || 0;
         document.getElementById('editUserAdmin').checked = user.isAdmin || false;
         
         document.getElementById('editUserModal').classList.add('active');
@@ -345,20 +345,49 @@ const Admin = {
     async saveUserEdit() {
         if (!this.selectedUser) return;
         
-        const data = {
-            displayName: document.getElementById('editUserName').value.trim(),
-            xp: parseInt(document.getElementById('editUserXP').value) || 0,
-            streak: parseInt(document.getElementById('editUserStreak').value) || 0,
-            freezeCount: parseInt(document.getElementById('editUserFreeze').value) || 0,
-            isAdmin: document.getElementById('editUserAdmin').checked
-        };
+        const displayName = document.getElementById('editUserName').value.trim();
+        const targetXP = parseInt(document.getElementById('editUserXP').value) || 0;
+        const streak = parseInt(document.getElementById('editUserStreak').value) || 0;
+        const freezesRemaining = parseInt(document.getElementById('editUserFreeze').value) || 0;
+        const isAdmin = document.getElementById('editUserAdmin').checked;
         
-        const success = await this.updateUser(this.selectedUser.id, data);
+        // XP is calculated as: totalWords * 10 + masteredWords * 50 + streak * 5 + bonusXP
+        // To set target XP, we calculate bonusXP needed
+        // bonusXP = targetXP - (current calculated XP without bonus)
+        const currentBaseXP = (this.selectedUser.totalWords || 0) * 10 + 
+                              (this.selectedUser.masteredWords || 0) * 50 + 
+                              streak * 5;
+        const bonusXP = Math.max(0, targetXP - currentBaseXP);
         
-        if (success) {
+        try {
+            const { doc, setDoc, updateDoc } = FirebaseDB.firestore;
+            const uid = this.selectedUser.id;
+            
+            // Update main user document (for admin panel display & leaderboard)
+            await updateDoc(doc(db, 'users', uid), {
+                displayName,
+                xp: targetXP,
+                streak,
+                freezesRemaining,
+                bonusXP,
+                isAdmin
+            });
+            
+            // Also update user's settings/stats subcollection (where app reads from)
+            await setDoc(doc(db, `users/${uid}/settings`, 'stats'), {
+                streak,
+                freezesRemaining,
+                bonusXP
+            }, { merge: true });
+            
+            App.showToast('Đã cập nhật user', 'success');
             document.getElementById('editUserModal').classList.remove('active');
             await this.fetchAllUsers();
             this.renderUsers();
+            
+        } catch (error) {
+            console.error('Update user error:', error);
+            App.showToast('Lỗi cập nhật user', 'error');
         }
     },
     
