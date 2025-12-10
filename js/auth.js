@@ -26,6 +26,17 @@ const Auth = {
             this.auth = getAuth(app);
             this.provider = new GoogleAuthProvider();
             
+            // Handle redirect result (for PWA/iOS)
+            const { getRedirectResult } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+            try {
+                const result = await getRedirectResult(this.auth);
+                if (result && result.user) {
+                    console.log('Redirect login successful:', result.user.displayName);
+                }
+            } catch (redirectError) {
+                console.log('No redirect result or error:', redirectError);
+            }
+            
             // Listen for auth state changes
             return new Promise((resolve) => {
                 onAuthStateChanged(this.auth, (user) => {
@@ -58,19 +69,38 @@ const Auth = {
         }
     },
     
+    // Check if running as standalone PWA
+    isStandalone() {
+        return window.matchMedia('(display-mode: standalone)').matches ||
+               window.navigator.standalone === true ||
+               document.referrer.includes('android-app://');
+    },
+    
     // Sign in with Google
     async signInWithGoogle() {
         try {
-            const { signInWithPopup } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-            const result = await signInWithPopup(this.auth, this.provider);
-            App.showToast(`Xin chào, ${result.user.displayName}! 👋`, 'success');
-            return result.user;
+            // Use redirect for PWA/iOS standalone mode (popup doesn't work)
+            if (this.isStandalone()) {
+                const { signInWithRedirect } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+                await signInWithRedirect(this.auth, this.provider);
+                return null; // Will redirect, so no result here
+            } else {
+                // Use popup for regular browser
+                const { signInWithPopup } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+                const result = await signInWithPopup(this.auth, this.provider);
+                App.showToast(`Xin chào, ${result.user.displayName}! 👋`, 'success');
+                return result.user;
+            }
         } catch (error) {
             console.error('Sign in error:', error);
             if (error.code === 'auth/popup-closed-by-user') {
                 App.showToast('Đăng nhập bị hủy', 'warning');
+            } else if (error.code === 'auth/popup-blocked') {
+                // Fallback to redirect if popup is blocked
+                const { signInWithRedirect } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+                await signInWithRedirect(this.auth, this.provider);
             } else {
-                App.showToast('Lỗi đăng nhập', 'error');
+                App.showToast('Lỗi đăng nhập: ' + error.message, 'error');
             }
             return null;
         }

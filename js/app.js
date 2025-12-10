@@ -685,11 +685,18 @@ const App = {
             e.preventDefault();
             this.deferredPrompt = e;
             
-            // Show install button
+            // Show install button (header)
             const installBtn = document.getElementById('installBtn');
             if (installBtn) {
                 installBtn.style.display = 'block';
                 installBtn.addEventListener('click', () => this.installPWA());
+            }
+            
+            // Show install button (landing page)
+            const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+            if (pwaInstallBtn) {
+                pwaInstallBtn.style.display = 'inline-block';
+                pwaInstallBtn.addEventListener('click', () => this.installPWA());
             }
             
             console.log('PWA install available');
@@ -700,6 +707,10 @@ const App = {
             this.deferredPrompt = null;
             const installBtn = document.getElementById('installBtn');
             if (installBtn) installBtn.style.display = 'none';
+            const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+            if (pwaInstallBtn) pwaInstallBtn.style.display = 'none';
+            
+            this.showToast('Ứng dụng đã được cài đặt! 🎉', 'success');
         });
     },
     

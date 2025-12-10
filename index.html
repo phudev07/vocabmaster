@@ -2,20 +2,25 @@
 <html lang="vi" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
     <meta name="description" content="Ứng dụng học từ vựng tiếng Anh với Spaced Repetition System">
     <title>VocabMaster - Học Từ Vựng Tiếng Anh</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#6366f1">
+    <!-- iOS PWA Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VocabMaster">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
     <!-- Content Security Policy -->
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'self';
-        script-src 'self' https://www.gstatic.com https://cdn.sheetjs.com https://www.google.com https://www.gstatic.com 'unsafe-inline' 'unsafe-eval';
+        script-src 'self' https://www.gstatic.com https://cdn.sheetjs.com https://www.google.com https://apis.google.com 'unsafe-inline' 'unsafe-eval';
         style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
         font-src 'self' https://fonts.gstatic.com;
         img-src 'self' data: https: blob:;
         connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.cloudfunctions.net https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com;
-        frame-src https://www.google.com https://vocabmaster-4c784.firebaseapp.com;
+        frame-src https://www.google.com https://vocabmaster-4c784.firebaseapp.com https://apis.google.com;
     ">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -152,6 +157,40 @@
             <div class="leaderboard" id="landingLeaderboard">
                 <div class="leaderboard-loading">Đang tải...</div>
             </div>
+        </section>
+
+        <!-- App Install Section -->
+        <section class="landing-section install-section">
+            <h2 class="section-title">📱 Cài đặt ứng dụng</h2>
+            <p class="install-subtitle">Thêm VocabMaster vào màn hình chính để trải nghiệm như ứng dụng native!</p>
+            
+            <div class="install-cards">
+                <div class="install-card">
+                    <div class="install-icon">🍎</div>
+                    <h3>iPhone / iPad</h3>
+                    <ol class="install-steps">
+                        <li>Mở trang web này trên Safari</li>
+                        <li>Nhấn nút <strong>Chia sẻ</strong> <span class="share-icon">⬆️</span></li>
+                        <li>Chọn <strong>"Thêm vào MH chính"</strong></li>
+                        <li>Nhấn <strong>"Thêm"</strong></li>
+                    </ol>
+                </div>
+                <div class="install-card">
+                    <div class="install-icon">🤖</div>
+                    <h3>Android</h3>
+                    <ol class="install-steps">
+                        <li>Mở trang web này trên Chrome</li>
+                        <li>Nhấn menu <strong>⋮</strong> (3 chấm)</li>
+                        <li>Chọn <strong>"Cài đặt ứng dụng"</strong> hoặc <strong>"Thêm vào MH chính"</strong></li>
+                        <li>Nhấn <strong>"Cài đặt"</strong></li>
+                    </ol>
+                </div>
+            </div>
+            
+            <!-- PWA Install Button (shown when available) -->
+            <button class="btn btn-install btn-lg" id="pwaInstallBtn" style="display: none;">
+                ⬇️ Cài đặt ứng dụng
+            </button>
         </section>
 
         <!-- CTA -->
