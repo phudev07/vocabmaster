@@ -407,8 +407,34 @@ const App = {
         document.getElementById('profileTestCount').textContent = Storage.getStats().testCount || 0;
         document.getElementById('profileAccuracy').textContent = `${Stats.getAccuracyRate()}%`;
         
-        // Render badges
+        // Render achievement badges
         Achievements.renderProfileBadges();
+        
+        // Render current animated badge and selector button
+        const badgeContainer = document.getElementById('profileAnimatedBadge');
+        if (badgeContainer) {
+            const localStats = Storage.getStats();
+            const userBadges = localStats.badges || {};
+            const currentBadge = Badges.getSelectedBadge(userBadges, xp);
+            
+            if (currentBadge) {
+                badgeContainer.innerHTML = `
+                    <div class="current-badge-display">
+                        ${Badges.renderBadge(currentBadge, 'large')}
+                        <span class="badge-label">${currentBadge.name}</span>
+                    </div>
+                    <button class="btn-outline" onclick="App.openBadgeSelector()">🎨 Thay đổi</button>
+                `;
+            } else {
+                badgeContainer.innerHTML = `
+                    <div class="current-badge-display">
+                        <span class="badge-icon">❌</span>
+                        <span class="badge-label">Chưa chọn badge</span>
+                    </div>
+                    <button class="btn-outline" onclick="App.openBadgeSelector()">🎨 Chọn badge</button>
+                `;
+            }
+        }
         
         // Show modal
         document.getElementById('profileModal').classList.add('active');
@@ -430,6 +456,49 @@ const App = {
             // Update active state
             const currentColor = document.documentElement.getAttribute('data-color') || '';
             this.updateColorSelector(currentColor);
+        }
+    },
+    
+    // Open badge selector modal
+    openBadgeSelector() {
+        if (!Auth.isLoggedIn()) return;
+        
+        const localStats = Storage.getStats();
+        const userBadges = localStats.badges || {};
+        const stats = Stats.calculate();
+        const bonusXP = localStats.bonusXP || 0;
+        const xp = stats.totalWords * 10 + stats.masteredWords * 50 + stats.streak * 5 + bonusXP;
+        
+        // Create modal content
+        const content = Badges.renderBadgeSelector(xp, userBadges);
+        
+        // Show in a simple modal
+        const modal = document.getElementById('badgeSelectorModal');
+        if (modal) {
+            document.getElementById('badgeSelectorContent').innerHTML = content;
+            modal.classList.add('active');
+        } else {
+            // Fallback: create modal dynamically
+            const dynamicModal = document.createElement('div');
+            dynamicModal.className = 'modal active';
+            dynamicModal.id = 'badgeSelectorModal';
+            dynamicModal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>🏷️ Chọn Badge Hiệu Ứng</h3>
+                        <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
+                    </div>
+                    <div class="modal-body" id="badgeSelectorContent">
+                        ${content}
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(dynamicModal);
+            
+            // Close on backdrop click
+            dynamicModal.addEventListener('click', (e) => {
+                if (e.target === dynamicModal) dynamicModal.remove();
+            });
         }
     },
     
@@ -561,10 +630,11 @@ const App = {
             }
             
             const user = userDoc.data();
+            const badgeHtml = Badges.getBadgeHtml(user, 'medium');
             
             // Populate user profile modal
             document.getElementById('viewUserAvatar').src = user.photoURL || '';
-            document.getElementById('viewUserName').textContent = user.displayName || 'Unknown';
+            document.getElementById('viewUserName').innerHTML = (user.displayName || 'Unknown') + badgeHtml;
             document.getElementById('viewUserXP').textContent = user.xp || 0;
             document.getElementById('viewUserStreak').textContent = user.streak || 0;
             document.getElementById('viewUserWords').textContent = user.totalWords || 0;

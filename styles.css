@@ -3356,3 +3356,335 @@ body {
         display: flex;
     }
 }
+
+/* ========================================
+   Animated Badges System
+   ======================================== */
+
+/* Badge container */
+.animated-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+
+/* Badge sizes */
+.badge-sm, .badge-small {
+    width: 18px;
+    height: 18px;
+    font-size: 12px;
+}
+
+.badge-md, .badge-medium {
+    width: 24px;
+    height: 24px;
+    font-size: 16px;
+}
+
+.badge-lg, .badge-large {
+    width: 36px;
+    height: 36px;
+    font-size: 24px;
+}
+
+.badge-icon {
+    display: inline-block;
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+/* Base animations */
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+@keyframes badgeSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes badgeShine {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.5) drop-shadow(0 0 4px currentColor); }
+}
+
+@keyframes badgeBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+@keyframes badgeWiggle {
+    0%, 100% { transform: rotate(-3deg); }
+    50% { transform: rotate(3deg); }
+}
+
+@keyframes badgeGlow {
+    0%, 100% { filter: drop-shadow(0 0 2px currentColor); }
+    50% { filter: drop-shadow(0 0 8px currentColor) brightness(1.2); }
+}
+
+@keyframes badgeRainbow {
+    0% { filter: hue-rotate(0deg); }
+    100% { filter: hue-rotate(360deg); }
+}
+
+@keyframes badgeFlame {
+    0%, 100% { transform: scaleY(1) scaleX(1); }
+    25% { transform: scaleY(1.1) scaleX(0.95); }
+    50% { transform: scaleY(0.95) scaleX(1.05); }
+    75% { transform: scaleY(1.05) scaleX(0.98); }
+}
+
+/* Premium Badge Styles - SVG */
+.badge-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.badge-verified .badge-svg {
+    animation: badgePulse 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 3px rgba(24, 119, 242, 0.5));
+}
+
+.badge-diamond .badge-svg {
+    animation: badgeSpin 4s linear infinite, badgeShine 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 4px rgba(0, 212, 255, 0.5));
+}
+
+.badge-flame .badge-svg {
+    animation: badgeFlame 0.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 3px rgba(255, 107, 53, 0.5));
+}
+
+.badge-rainbow .badge-svg {
+    animation: badgeRainbow 3s linear infinite, badgePulse 2s ease-in-out infinite;
+}
+
+.badge-unique .badge-svg {
+    animation: badgeWiggle 1s ease-in-out infinite, badgeShine 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 3px rgba(180, 74, 192, 0.5));
+}
+
+/* Level badges animations - SVG */
+.animated-badge[data-badge-id="level_1"] .badge-svg { 
+    animation: badgePulse 2s ease-in-out infinite; 
+}
+.animated-badge[data-badge-id="level_2"] .badge-svg { 
+    animation: badgeBounce 1.5s ease-in-out infinite; 
+}
+.animated-badge[data-badge-id="level_3"] .badge-svg { 
+    animation: badgeSpin 8s linear infinite; 
+}
+.animated-badge[data-badge-id="level_4"] .badge-svg { 
+    animation: badgeShine 1.5s ease-in-out infinite; 
+}
+.animated-badge[data-badge-id="level_5"] .badge-svg { 
+    animation: badgeGlow 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 4px rgba(167, 139, 250, 0.5));
+}
+.animated-badge[data-badge-id="level_6"] .badge-svg { 
+    animation: badgeShine 0.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 4px rgba(236, 72, 153, 0.5));
+}
+.animated-badge[data-badge-id="level_7"] .badge-svg { 
+    animation: badgeGlow 1.5s ease-in-out infinite, badgeWiggle 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.6));
+}
+
+/* Badge Selector Styles */
+.badge-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.badge-selector h4 {
+    margin: 12px 0 8px;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.badge-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: 2px solid transparent;
+}
+
+.badge-option:hover {
+    background: var(--bg-secondary);
+    transform: translateX(4px);
+}
+
+.badge-option.selected {
+    border-color: var(--accent-primary);
+    background: var(--bg-secondary);
+}
+
+.badge-option.locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.badge-option.locked:hover {
+    transform: none;
+}
+
+.badge-option .badge-name {
+    font-weight: 500;
+    flex: 1;
+}
+
+.badge-option .badge-level {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.badge-option .badge-desc {
+    font-size: 0.8rem;
+    color: var(--accent-primary);
+}
+
+.badge-option .badge-locked {
+    font-size: 0.75rem;
+    color: var(--accent-warning);
+    margin-left: auto;
+}
+
+/* Chat badge display */
+.chat-sender .animated-badge,
+.chat-name .animated-badge {
+    margin-left: 4px;
+}
+
+/* Leaderboard badge display */
+.leaderboard-name .animated-badge {
+    margin-left: 4px;
+}
+
+/* Animated Badge Section in Profile */
+.animated-badge-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    gap: 12px;
+}
+
+.current-badge-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.current-badge-display .badge-label {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* Admin Label in Chat */
+.admin-label {
+    display: inline-block;
+    padding: 1px 6px;
+    margin-left: 6px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: linear-gradient(135deg, #DC2626, #991B1B);
+    color: #FFD700;
+    border-radius: 4px;
+    vertical-align: middle;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    animation: adminGlow 2s ease-in-out infinite;
+}
+
+@keyframes adminGlow {
+    0%, 100% { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
+    50% { box-shadow: 0 1px 8px rgba(220, 38, 38, 0.5), 0 0 12px rgba(255, 215, 0, 0.3); }
+}
+
+/* New Premium Badge Styles */
+.badge-vip .badge-svg {
+    animation: badgeShine 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.5));
+}
+
+.badge-creator .badge-svg {
+    animation: badgePulse 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.5));
+}
+
+.badge-developer .badge-svg {
+    animation: badgeBounce 1.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 3px rgba(16, 185, 129, 0.5));
+}
+
+.badge-supporter .badge-svg {
+    animation: badgePulse 1.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 3px rgba(236, 72, 153, 0.5));
+}
+
+.badge-champion .badge-svg {
+    animation: badgeGlow 1.5s ease-in-out infinite, badgeWiggle 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 4px rgba(220, 38, 38, 0.5));
+}
+
+/* ========================================
+   Admin Edit User Modal Fixes
+   ======================================== */
+
+/* Make edit user form scrollable */
+#editUserModal .modal-content {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+#editUserModal form {
+    overflow-y: auto;
+    max-height: calc(90vh - 70px);
+    flex: 1;
+}
+
+#editUserModal .form-actions {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+    margin: 0;
+    z-index: 10;
+}
+
+/* Premium badges grid - 2 columns */
+.premium-badges-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem 1rem;
+}
+
+.premium-badges-checkboxes .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0;
+    font-size: 0.875rem;
+}
+
+.premium-badges-checkboxes .checkbox-label span {
+    white-space: nowrap;
+}

@@ -34,11 +34,18 @@ const Chat = {
         try {
             const { collection, addDoc, serverTimestamp } = FirebaseDB.firestore;
             
+            // Get current user's badge info from localStorage
+            const localStats = Storage.getStats();
+            const userBadges = localStats.badges || {};
+            const xp = (localStats.totalWords || 0) * 10 + (localStats.masteredWords || 0) * 50 + (localStats.streak || 0) * 5 + (localStats.bonusXP || 0);
+            
             await addDoc(collection(db, 'chat'), {
                 text: sanitizedText,
                 userId: Auth.user.uid,
                 userName: Auth.user.displayName || 'Người dùng',
                 userAvatar: Auth.user.photoURL || '',
+                xp: xp,
+                badges: userBadges,
                 timestamp: serverTimestamp()
             });
             
@@ -116,11 +123,19 @@ const Chat = {
             const isOwn = msg.userId === currentUserId;
             const time = this.formatTime(msg.timestamp);
             
+            // Get badge from Leaderboard.users (current data) instead of stored message data
+            const leaderboardUser = Leaderboard.users.find(u => u.id === msg.userId);
+            const badgeHtml = leaderboardUser ? Badges.getBadgeHtml(leaderboardUser, 'small') : '';
+            
+            // Check if user is admin (from Firestore, cannot be faked)
+            const isAdmin = leaderboardUser?.isAdmin || false;
+            const adminLabel = isAdmin ? '<span class="admin-label">Admin</span>' : '';
+            
             return `
                 <div class="chat-message ${isOwn ? 'own' : ''}" data-id="${msg.id}">
                     ${!isOwn ? `<img class="chat-avatar clickable-avatar" src="${msg.userAvatar || ''}" alt="${msg.userName}" onclick="App.showUserProfile('${msg.userId}')" title="Xem thông tin">` : ''}
                     <div class="chat-bubble">
-                        ${!isOwn ? `<div class="chat-sender clickable-name" onclick="App.showUserProfile('${msg.userId}')">${msg.userName}</div>` : ''}
+                        ${!isOwn ? `<div class="chat-sender clickable-name" onclick="App.showUserProfile('${msg.userId}')">${msg.userName}${adminLabel}${badgeHtml}</div>` : ''}
                         <div class="chat-text">${this.escapeHtml(msg.text)}</div>
                         <div class="chat-meta">
                             <span class="chat-time">${time}</span>

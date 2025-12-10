@@ -338,6 +338,19 @@ const Admin = {
         document.getElementById('editUserFreeze').value = user.freezesRemaining || 0;
         document.getElementById('editUserAdmin').checked = user.isAdmin || false;
         
+        // Load premium badges (checkboxes)
+        const premiumBadges = user.badges?.premium || [];
+        document.getElementById('editBadgeVerified').checked = premiumBadges.includes('verified');
+        document.getElementById('editBadgeDiamond').checked = premiumBadges.includes('diamond');
+        document.getElementById('editBadgeFlame').checked = premiumBadges.includes('flame');
+        document.getElementById('editBadgeRainbow').checked = premiumBadges.includes('rainbow');
+        document.getElementById('editBadgeUnique').checked = premiumBadges.includes('unique');
+        document.getElementById('editBadgeVip').checked = premiumBadges.includes('vip');
+        document.getElementById('editBadgeCreator').checked = premiumBadges.includes('creator');
+        document.getElementById('editBadgeDeveloper').checked = premiumBadges.includes('developer');
+        document.getElementById('editBadgeSupporter').checked = premiumBadges.includes('supporter');
+        document.getElementById('editBadgeChampion').checked = premiumBadges.includes('champion');
+        
         document.getElementById('editUserModal').classList.add('active');
     },
     
@@ -350,6 +363,19 @@ const Admin = {
         const streak = parseInt(document.getElementById('editUserStreak').value) || 0;
         const freezesRemaining = parseInt(document.getElementById('editUserFreeze').value) || 0;
         const isAdmin = document.getElementById('editUserAdmin').checked;
+        
+        // Collect premium badges from checkboxes
+        const premiumBadges = [];
+        if (document.getElementById('editBadgeVerified').checked) premiumBadges.push('verified');
+        if (document.getElementById('editBadgeDiamond').checked) premiumBadges.push('diamond');
+        if (document.getElementById('editBadgeFlame').checked) premiumBadges.push('flame');
+        if (document.getElementById('editBadgeRainbow').checked) premiumBadges.push('rainbow');
+        if (document.getElementById('editBadgeUnique').checked) premiumBadges.push('unique');
+        if (document.getElementById('editBadgeVip').checked) premiumBadges.push('vip');
+        if (document.getElementById('editBadgeCreator').checked) premiumBadges.push('creator');
+        if (document.getElementById('editBadgeDeveloper').checked) premiumBadges.push('developer');
+        if (document.getElementById('editBadgeSupporter').checked) premiumBadges.push('supporter');
+        if (document.getElementById('editBadgeChampion').checked) premiumBadges.push('champion');
         
         // XP is calculated as: totalWords * 10 + masteredWords * 50 + streak * 5 + bonusXP
         // To set target XP, we calculate bonusXP needed
@@ -370,14 +396,16 @@ const Admin = {
                 streak,
                 freezesRemaining,
                 bonusXP,
-                isAdmin
+                isAdmin,
+                'badges.premium': premiumBadges
             });
             
             // Also update user's settings/stats subcollection (where app reads from)
             await setDoc(doc(db, `users/${uid}/settings`, 'stats'), {
                 streak,
                 freezesRemaining,
-                bonusXP
+                bonusXP,
+                badges: { premium: premiumBadges }
             }, { merge: true });
             
             App.showToast('Đã cập nhật user', 'success');

@@ -738,6 +738,51 @@
                         <span>Là Admin</span>
                     </label>
                 </div>
+                <div class="form-group">
+                    <label>💎 Premium Badges (cấp cho user)</label>
+                    <div class="premium-badges-checkboxes">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editBadgeVerified">
+                            <span>✅ Verified</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editBadgeDiamond">
+                            <span>💎 Diamond</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editBadgeFlame">
+                            <span>🔥 Flame</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editBadgeRainbow">
+                            <span>🌈 Rainbow</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editBadgeUnique">
+                            <span>🎭 Unique</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editBadgeVip">
+                            <span>👑 VIP</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editBadgeCreator">
+                            <span>📷 Creator</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editBadgeDeveloper">
+                            <span>💻 Developer</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editBadgeSupporter">
+                            <span>❤️ Supporter</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editBadgeChampion">
+                            <span>🏅 Champion</span>
+                        </label>
+                    </div>
+                </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary modal-close">Hủy</button>
                     <button type="submit" class="btn btn-primary">Lưu</button>
@@ -870,6 +915,14 @@
                     </div>
                 </div>
                 
+                <!-- Animated Badge -->
+                <div class="profile-section">
+                    <h4>🏷️ Badge Hiệu Ứng</h4>
+                    <div class="animated-badge-section" id="profileAnimatedBadge">
+                        <!-- Badge will be rendered here by JS -->
+                    </div>
+                </div>
+                
                 <!-- Badges -->
                 <div class="profile-section">
                     <h4>🏅 Huy chương</h4>
@@ -934,6 +987,7 @@
     <script src="js/vocabulary.js"></script>
     <script src="js/review.js"></script>
     <script src="js/test.js"></script>
+    <script src="js/badges.js"></script>
     <script src="js/achievements.js"></script>
     <script src="js/leaderboard.js"></script>
     <script src="js/chat.js"></script>

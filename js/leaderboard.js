@@ -23,7 +23,9 @@ const Leaderboard = {
                     xp: data.xp || 0,
                     totalWords: data.totalWords || 0,
                     streak: data.streak || 0,
-                    lastActive: data.lastActive || null
+                    lastActive: data.lastActive || null,
+                    badges: data.badges || {},
+                    isAdmin: data.isAdmin || false
                 });
             });
             
@@ -157,7 +159,7 @@ const Leaderboard = {
                     <span class="leaderboard-rank ${rankClass}">${rankIcon}</span>
                     <img class="leaderboard-avatar" src="${user.avatar || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%236366f1%22/><text x=%2250%22 y=%2265%22 font-size=%2240%22 text-anchor=%22middle%22 fill=%22white%22>${user.name.charAt(0)}</text></svg>'}" alt="${user.name}">
                     <div class="leaderboard-info">
-                        <div class="leaderboard-name">${user.name}</div>
+                        <div class="leaderboard-name">${user.name}${Badges.getBadgeHtml(user, 'small')}</div>
                         <div class="leaderboard-xp">${user.xp} XP • ${user.totalWords} từ • 🔥${user.streak}</div>
                     </div>
                 </div>
@@ -186,7 +188,7 @@ const Leaderboard = {
                     <span class="leaderboard-rank">${rankIcon}</span>
                     <img class="leaderboard-avatar" src="${user.avatar || ''}" alt="${user.name}">
                     <div class="leaderboard-info">
-                        <div class="leaderboard-name">${user.name}${isCurrentUser ? ' (Bạn)' : ''}</div>
+                        <div class="leaderboard-name">${user.name}${Badges.getBadgeHtml(user, 'small')}${isCurrentUser ? ' (Bạn)' : ''}</div>
                         <div class="leaderboard-xp">${user.xp} XP</div>
                     </div>
                 </div>
@@ -258,7 +260,9 @@ const Leaderboard = {
                         xp: data.xp || 0,
                         totalWords: data.totalWords || 0,
                         streak: data.streak || 0,
-                        lastActive: data.lastActive || null
+                        lastActive: data.lastActive || null,
+                        badges: data.badges || {},
+                        isAdmin: data.isAdmin || false
                     });
                 });
                 
