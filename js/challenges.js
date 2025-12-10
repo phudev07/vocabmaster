@@ -13,6 +13,18 @@ const Challenges = {
             return null;
         }
         
+        // Check if user is blocked
+        if (Security.isBlocked()) {
+            App.showToast('Bạn đang bị tạm khóa do hoạt động bất thường', 'error');
+            return null;
+        }
+        
+        // Rate limiting
+        if (!Security.isAllowed('create_challenge')) {
+            App.showToast('Bạn đang tạo thách đấu quá nhanh, vui lòng chờ', 'warning');
+            return null;
+        }
+        
         try {
             const { collection, addDoc, serverTimestamp } = FirebaseDB.firestore;
             
@@ -100,6 +112,18 @@ const Challenges = {
     
     // Accept a challenge
     async acceptChallenge(challengeId) {
+        // Check if user is blocked
+        if (Security.isBlocked()) {
+            App.showToast('Bạn đang bị tạm khóa do hoạt động bất thường', 'error');
+            return;
+        }
+        
+        // Rate limiting
+        if (!Security.isAllowed('accept_challenge')) {
+            App.showToast('Thao tác quá nhanh, vui lòng chờ', 'warning');
+            return;
+        }
+        
         try {
             const { doc, updateDoc } = FirebaseDB.firestore;
             

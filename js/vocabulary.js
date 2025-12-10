@@ -157,12 +157,34 @@ const Vocabulary = {
             App.showToast('Vui lòng chọn một chủ đề trước', 'error');
             return;
         }
+        
+        // Check if user is blocked
+        if (Security.isBlocked()) {
+            App.showToast('Bạn đang bị tạm khóa do hoạt động bất thường', 'error');
+            return;
+        }
+        
+        // Rate limiting - different limits for create vs update
+        const action = id ? 'update_word' : 'create_word';
+        if (!Security.isAllowed(action)) {
+            App.showToast('Thao tác quá nhanh, vui lòng chờ', 'warning');
+            return;
+        }
+        
+        // Sanitize input
+        const sanitizedEnglish = Security.sanitizeText(english, 100);
+        const sanitizedVietnamese = Security.sanitizeText(vietnamese, 200);
+        
+        if (!sanitizedEnglish || !sanitizedVietnamese) {
+            App.showToast('Dữ liệu không hợp lệ', 'error');
+            return;
+        }
 
         const word = {
             id: id || undefined,
             topicId,
-            english,
-            vietnamese
+            english: sanitizedEnglish,
+            vietnamese: sanitizedVietnamese
         };
 
         // If editing, preserve SRS data

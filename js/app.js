@@ -496,6 +496,18 @@ const App = {
             return;
         }
         
+        // Check if user is blocked
+        if (Security.isBlocked()) {
+            this.showToast('Bạn đang bị tạm khóa do hoạt động bất thường', 'error');
+            return;
+        }
+        
+        // Rate limiting for avatar uploads
+        if (!Security.isAllowed('avatar_upload')) {
+            this.showToast('Bạn đang tải ảnh quá nhanh, vui lòng chờ', 'warning');
+            return;
+        }
+        
         try {
             this.showToast('Đang tải ảnh...', 'success');
             

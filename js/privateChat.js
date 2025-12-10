@@ -195,12 +195,28 @@ const PrivateChat = {
         if (!this.currentConversation || !Auth.isLoggedIn()) return;
         if (!text || !text.trim()) return;
         
+        // Check if user is blocked
+        if (Security.isBlocked()) {
+            App.showToast('Bạn đang bị tạm khóa do hoạt động bất thường', 'error');
+            return;
+        }
+        
+        // Rate limiting
+        if (!Security.isAllowed('private_message')) {
+            App.showToast('Bạn đang gửi tin nhắn quá nhanh, vui lòng chờ', 'warning');
+            return;
+        }
+        
+        // Sanitize input
+        const sanitizedText = Security.sanitizeText(text.trim(), 500);
+        if (!sanitizedText) return;
+        
         try {
             const { collection, addDoc, serverTimestamp, doc, updateDoc } = FirebaseDB.firestore;
             
             // Add message
             await addDoc(collection(db, `conversations/${this.currentConversation}/messages`), {
-                text: text.trim(),
+                text: sanitizedText,
                 senderId: Auth.user.uid,
                 senderName: Auth.user.displayName,
                 timestamp: serverTimestamp()
@@ -208,9 +224,12 @@ const PrivateChat = {
             
             // Update conversation with last message
             await updateDoc(doc(db, 'conversations', this.currentConversation), {
-                lastMessage: text.trim().substring(0, 50),
+                lastMessage: sanitizedText.substring(0, 50),
                 lastMessageTime: serverTimestamp()
             });
+            
+            // Log activity for abuse detection
+            Security.logActivity('private_message');
             
         } catch (error) {
             console.error('Send message error:', error);

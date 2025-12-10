@@ -15,16 +15,35 @@ const Chat = {
         
         if (!text || text.trim() === '') return;
         
+        // Check if user is blocked
+        if (Security.isBlocked()) {
+            App.showToast('Bạn đang bị tạm khóa do hoạt động bất thường', 'error');
+            return;
+        }
+        
+        // Rate limiting
+        if (!Security.isAllowed('chat_message')) {
+            App.showToast('Bạn đang gửi tin nhắn quá nhanh, vui lòng chờ', 'warning');
+            return;
+        }
+        
+        // Sanitize input
+        const sanitizedText = Security.sanitizeText(text.trim(), 500);
+        if (!sanitizedText) return;
+        
         try {
             const { collection, addDoc, serverTimestamp } = FirebaseDB.firestore;
             
             await addDoc(collection(db, 'chat'), {
-                text: text.trim(),
+                text: sanitizedText,
                 userId: Auth.user.uid,
                 userName: Auth.user.displayName || 'Người dùng',
                 userAvatar: Auth.user.photoURL || '',
                 timestamp: serverTimestamp()
             });
+            
+            // Log activity for abuse detection
+            Security.logActivity('chat_message');
             
             console.log('Message sent');
         } catch (error) {
@@ -207,10 +226,20 @@ const Chat = {
     async saveEdit(newText) {
         if (!this.editingMessageId) return;
         
+        // Check if user is blocked
+        if (Security.isBlocked()) {
+            App.showToast('Bạn đang bị tạm khóa do hoạt động bất thường', 'error');
+            return;
+        }
+        
+        // Sanitize input
+        const sanitizedText = Security.sanitizeText(newText.trim(), 500);
+        if (!sanitizedText) return;
+        
         try {
             const { doc, updateDoc } = FirebaseDB.firestore;
             await updateDoc(doc(db, 'chat', this.editingMessageId), {
-                text: newText.trim(),
+                text: sanitizedText,
                 edited: true
             });
             App.showToast('Đã sửa tin nhắn', 'success');
