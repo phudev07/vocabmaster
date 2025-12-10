@@ -79,6 +79,12 @@ const Auth = {
     // Sign out
     async signOut() {
         try {
+            // Set user offline before signing out
+            if (typeof Leaderboard !== 'undefined') {
+                await Leaderboard.setOffline();
+                Leaderboard.stopHeartbeat();
+            }
+            
             const { signOut } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
             await signOut(this.auth);
             
@@ -91,7 +97,7 @@ const Auth = {
             location.reload();
         } catch (error) {
             console.error('Sign out error:', error);
-            App.showToast('Lỗi đăng xuất', 'error');
+            App.showToast('Lỗi đăng xuất', error);
         }
     },
     

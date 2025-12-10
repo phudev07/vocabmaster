@@ -64,6 +64,69 @@ const Leaderboard = {
         }
     },
     
+    // Heartbeat interval ID
+    heartbeatInterval: null,
+    
+    // Start heartbeat - updates lastActive every 2 minutes
+    startHeartbeat() {
+        if (this.heartbeatInterval) return;
+        
+        // Update immediately
+        this.updateLastActive();
+        
+        // Then every 2 minutes
+        this.heartbeatInterval = setInterval(() => {
+            this.updateLastActive();
+        }, 2 * 60 * 1000);
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            this.setOffline();
+        });
+        
+        console.log('Heartbeat started');
+    },
+    
+    // Stop heartbeat
+    stopHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+            console.log('Heartbeat stopped');
+        }
+    },
+    
+    // Update only lastActive (lightweight)
+    async updateLastActive() {
+        if (!Auth.isLoggedIn() || !FirebaseDB.initialized) return;
+        
+        try {
+            const { doc, updateDoc } = FirebaseDB.firestore;
+            await updateDoc(doc(db, 'users', Auth.user.uid), {
+                lastActive: new Date().toISOString()
+            });
+        } catch (error) {
+            // Ignore errors for heartbeat
+        }
+    },
+    
+    // Set user as offline (set lastActive to past)
+    async setOffline() {
+        if (!Auth.isLoggedIn() || !FirebaseDB.initialized) return;
+        
+        try {
+            const { doc, updateDoc } = FirebaseDB.firestore;
+            // Set lastActive to 10 minutes ago so they appear offline immediately
+            const offlineTime = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+            await updateDoc(doc(db, 'users', Auth.user.uid), {
+                lastActive: offlineTime
+            });
+            console.log('User set offline');
+        } catch (error) {
+            console.error('Set offline error:', error);
+        }
+    },
+    
     // Get online users count (active in last 5 minutes)
     getOnlineCount() {
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -171,6 +234,61 @@ const Leaderboard = {
         }).join('');
     },
     
+    // Real-time listener unsubscribe function
+    unsubscribe: null,
+    
+    // Start real-time sync for users
+    async startRealtimeUsers() {
+        if (!FirebaseDB.initialized) return;
+        
+        try {
+            const { collection, onSnapshot } = FirebaseDB.firestore;
+            
+            this.unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
+                const users = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    users.push({
+                        id: doc.id,
+                        name: data.displayName || 'Người dùng',
+                        avatar: data.photoURL || '',
+                        xp: data.xp || 0,
+                        totalWords: data.totalWords || 0,
+                        streak: data.streak || 0,
+                        lastActive: data.lastActive || null
+                    });
+                });
+                
+                // Sort by XP descending
+                users.sort((a, b) => b.xp - a.xp);
+                this.users = users;
+                
+                // Re-render all leaderboards
+                this.renderLandingLeaderboard();
+                this.updateGlobalStats();
+                if (Auth.isLoggedIn()) {
+                    this.renderDashboardLeaderboard();
+                    this.renderDashboardOnline();
+                }
+                
+                console.log('Users updated in real-time');
+            });
+            
+            console.log('Real-time users sync started');
+        } catch (error) {
+            console.error('Start realtime users error:', error);
+        }
+    },
+    
+    // Stop real-time sync
+    stopRealtimeUsers() {
+        if (this.unsubscribe) {
+            this.unsubscribe();
+            this.unsubscribe = null;
+            console.log('Real-time users sync stopped');
+        }
+    },
+    
     // Initialize leaderboard (call from app.js)
     async init() {
         await this.fetchUsers();
@@ -182,6 +300,10 @@ const Leaderboard = {
             await this.updateUserProfile();
             this.renderDashboardLeaderboard();
             this.renderDashboardOnline();
+            this.startHeartbeat();
         }
+        
+        // Start real-time sync
+        this.startRealtimeUsers();
     }
 };
