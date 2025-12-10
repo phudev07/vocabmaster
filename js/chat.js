@@ -1,0 +1,266 @@
+/**
+ * Chat Module - Global group chat with Firebase
+ */
+
+const Chat = {
+    messages: [],
+    unsubscribe: null,
+    
+    // Send a message
+    async sendMessage(text) {
+        if (!Auth.isLoggedIn() || !FirebaseDB.initialized) {
+            App.showToast('Vui lòng đăng nhập để chat', 'warning');
+            return;
+        }
+        
+        if (!text || text.trim() === '') return;
+        
+        try {
+            const { collection, addDoc, serverTimestamp } = FirebaseDB.firestore;
+            
+            await addDoc(collection(db, 'chat'), {
+                text: text.trim(),
+                userId: Auth.user.uid,
+                userName: Auth.user.displayName || 'Người dùng',
+                userAvatar: Auth.user.photoURL || '',
+                timestamp: serverTimestamp()
+            });
+            
+            console.log('Message sent');
+        } catch (error) {
+            console.error('Send message error:', error);
+            App.showToast('Lỗi gửi tin nhắn', 'error');
+        }
+    },
+    
+    // Start real-time listener for messages
+    startListening() {
+        if (!FirebaseDB.initialized) return;
+        if (this.unsubscribe) return; // Already listening
+        
+        try {
+            const { collection, query, orderBy, limit, onSnapshot } = FirebaseDB.firestore;
+            
+            // Get last 100 messages, ordered by timestamp
+            const q = query(
+                collection(db, 'chat'),
+                orderBy('timestamp', 'asc'),
+                limit(100)
+            );
+            
+            this.unsubscribe = onSnapshot(q, (snapshot) => {
+                this.messages = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    this.messages.push({
+                        id: doc.id,
+                        text: data.text,
+                        userId: data.userId,
+                        userName: data.userName,
+                        userAvatar: data.userAvatar,
+                        timestamp: data.timestamp?.toDate() || new Date()
+                    });
+                });
+                
+                this.render();
+                this.scrollToBottom();
+            });
+            
+            console.log('Chat listening started');
+        } catch (error) {
+            console.error('Start listening error:', error);
+        }
+    },
+    
+    // Stop listening
+    stopListening() {
+        if (this.unsubscribe) {
+            this.unsubscribe();
+            this.unsubscribe = null;
+            console.log('Chat listening stopped');
+        }
+    },
+    
+    // Render messages
+    render() {
+        const container = document.getElementById('chatMessages');
+        if (!container) return;
+        
+        if (this.messages.length === 0) {
+            container.innerHTML = '<div class="chat-empty">Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện! 💬</div>';
+            return;
+        }
+        
+        const currentUserId = Auth.isLoggedIn() ? Auth.user.uid : null;
+        
+        container.innerHTML = this.messages.map(msg => {
+            const isOwn = msg.userId === currentUserId;
+            const time = this.formatTime(msg.timestamp);
+            
+            return `
+                <div class="chat-message ${isOwn ? 'own' : ''}" data-id="${msg.id}">
+                    ${!isOwn ? `<img class="chat-avatar" src="${msg.userAvatar || ''}" alt="${msg.userName}">` : ''}
+                    <div class="chat-bubble">
+                        ${!isOwn ? `<div class="chat-sender">${msg.userName}</div>` : ''}
+                        <div class="chat-text">${this.escapeHtml(msg.text)}</div>
+                        <div class="chat-meta">
+                            <span class="chat-time">${time}</span>
+                            ${isOwn ? `
+                                <div class="chat-actions">
+                                    <button class="chat-action-btn" onclick="Chat.editMessage('${msg.id}')" title="Sửa">✏️</button>
+                                    <button class="chat-action-btn" onclick="Chat.deleteMessage('${msg.id}')" title="Xóa">🗑️</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+    
+    // Format timestamp
+    formatTime(date) {
+        if (!date) return '';
+        const now = new Date();
+        const diff = now - date;
+        
+        // Today: show time
+        if (diff < 24 * 60 * 60 * 1000 && now.getDate() === date.getDate()) {
+            return date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // This week: show day + time
+        if (diff < 7 * 24 * 60 * 60 * 1000) {
+            return date.toLocaleDateString('vi-VN', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // Older: show date
+        return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+    },
+    
+    // Escape HTML to prevent XSS
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    },
+    
+    // Scroll to bottom of chat
+    scrollToBottom() {
+        const container = document.getElementById('chatMessages');
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
+    },
+    
+    // Currently editing message ID
+    editingMessageId: null,
+    
+    // Edit a message - puts text in input for editing
+    editMessage(messageId) {
+        const msg = this.messages.find(m => m.id === messageId);
+        if (!msg) return;
+        
+        const input = document.getElementById('chatInput');
+        const form = document.getElementById('chatForm');
+        const sendBtn = form.querySelector('button[type="submit"]');
+        
+        // Set input value to message text
+        input.value = msg.text;
+        input.focus();
+        
+        // Store editing state
+        this.editingMessageId = messageId;
+        
+        // Change button text
+        sendBtn.textContent = 'Sửa';
+        sendBtn.classList.add('editing');
+        
+        // Add cancel button if not exists
+        if (!document.getElementById('cancelEditBtn')) {
+            const cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.id = 'cancelEditBtn';
+            cancelBtn.className = 'btn btn-secondary';
+            cancelBtn.textContent = 'Hủy';
+            cancelBtn.onclick = () => this.cancelEdit();
+            form.appendChild(cancelBtn);
+        }
+    },
+    
+    // Cancel editing
+    cancelEdit() {
+        const input = document.getElementById('chatInput');
+        const form = document.getElementById('chatForm');
+        const sendBtn = form.querySelector('button[type="submit"]');
+        const cancelBtn = document.getElementById('cancelEditBtn');
+        
+        input.value = '';
+        this.editingMessageId = null;
+        sendBtn.textContent = 'Gửi';
+        sendBtn.classList.remove('editing');
+        
+        if (cancelBtn) cancelBtn.remove();
+    },
+    
+    // Save edited message
+    async saveEdit(newText) {
+        if (!this.editingMessageId) return;
+        
+        try {
+            const { doc, updateDoc } = FirebaseDB.firestore;
+            await updateDoc(doc(db, 'chat', this.editingMessageId), {
+                text: newText.trim(),
+                edited: true
+            });
+            App.showToast('Đã sửa tin nhắn', 'success');
+        } catch (error) {
+            console.error('Edit message error:', error);
+            App.showToast('Lỗi sửa tin nhắn', 'error');
+        }
+        
+        this.cancelEdit();
+    },
+    
+    // Delete a message
+    async deleteMessage(messageId) {
+        try {
+            const { doc, deleteDoc } = FirebaseDB.firestore;
+            await deleteDoc(doc(db, 'chat', messageId));
+            App.showToast('Đã xóa', 'success');
+        } catch (error) {
+            console.error('Delete message error:', error);
+            App.showToast('Lỗi xóa tin nhắn', 'error');
+        }
+    },
+    
+    // Handle input submit
+    handleSubmit(e) {
+        e.preventDefault();
+        const input = document.getElementById('chatInput');
+        if (input && input.value.trim()) {
+            if (this.editingMessageId) {
+                // Save edit
+                this.saveEdit(input.value);
+            } else {
+                // Send new message
+                this.sendMessage(input.value);
+                input.value = '';
+            }
+        }
+    },
+    
+    // Initialize chat
+    init() {
+        // Bind form submit
+        const form = document.getElementById('chatForm');
+        if (form) {
+            form.addEventListener('submit', (e) => this.handleSubmit(e));
+        }
+        
+        // Start listening if logged in
+        if (Auth.isLoggedIn()) {
+            this.startListening();
+        }
+    }
+};

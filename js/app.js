@@ -41,6 +41,7 @@ const App = {
         Review.init();
         Test.init();
         Achievements.init();
+        Chat.init();
         
         // Load theme
         this.loadTheme();
@@ -177,6 +178,17 @@ const App = {
                 } else if (view === 'review-due') {
                     this.showView('reviewDueView');
                     Vocabulary.renderDueWords();
+                } else if (view === 'chat') {
+                    this.showView('chatView');
+                    // Start listening if not already
+                    if (typeof Chat !== 'undefined' && Auth.isLoggedIn()) {
+                        Chat.startListening();
+                        // Update online count
+                        const onlineCount = document.getElementById('chatOnlineCount');
+                        if (onlineCount && typeof Leaderboard !== 'undefined') {
+                            onlineCount.textContent = Leaderboard.getOnlineCount();
+                        }
+                    }
                 }
                 
                 // Close sidebar on mobile
@@ -396,6 +408,108 @@ const App = {
             const currentColor = document.documentElement.getAttribute('data-color') || '';
             this.updateColorSelector(currentColor);
         }
+    },
+    
+    // Edit display name - shows input in modal
+    async editDisplayName() {
+        if (!Auth.isLoggedIn()) return;
+        
+        const currentName = Auth.user.displayName || '';
+        
+        // Create inline edit
+        const nameEl = document.getElementById('profileName');
+        const originalContent = nameEl.innerHTML;
+        
+        nameEl.innerHTML = `
+            <input type="text" id="nameEditInput" value="${currentName}" style="width: 150px; padding: 0.25rem 0.5rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary);">
+            <button onclick="App.saveDisplayName()" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" class="btn btn-primary">Lưu</button>
+            <button onclick="App.cancelNameEdit('${currentName}')" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" class="btn btn-secondary">Hủy</button>
+        `;
+        
+        document.getElementById('nameEditInput').focus();
+    },
+    
+    // Save display name
+    async saveDisplayName() {
+        const input = document.getElementById('nameEditInput');
+        const newName = input?.value?.trim();
+        
+        if (!newName) return;
+        
+        try {
+            const { updateProfile } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+            await updateProfile(Auth.user, { displayName: newName });
+            
+            if (FirebaseDB.initialized) {
+                const { doc, updateDoc } = FirebaseDB.firestore;
+                await updateDoc(doc(db, 'users', Auth.user.uid), {
+                    displayName: newName
+                });
+            }
+            
+            document.getElementById('profileName').textContent = newName;
+            document.getElementById('userName').textContent = newName;
+            
+            this.showToast('Đã cập nhật tên', 'success');
+        } catch (error) {
+            console.error('Update name error:', error);
+            this.showToast('Lỗi cập nhật tên', 'error');
+        }
+    },
+    
+    // Cancel name edit
+    cancelNameEdit(originalName) {
+        document.getElementById('profileName').textContent = originalName;
+    },
+    
+    // Upload avatar from file
+    async uploadAvatar(input) {
+        if (!Auth.isLoggedIn() || !input.files || !input.files[0]) return;
+        
+        const file = input.files[0];
+        
+        // Check file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            this.showToast('Ảnh quá lớn (tối đa 2MB)', 'warning');
+            return;
+        }
+        
+        try {
+            this.showToast('Đang tải ảnh...', 'success');
+            
+            // Import Firebase Storage
+            const { getStorage, ref, uploadBytes, getDownloadURL } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js');
+            const storage = getStorage();
+            
+            // Upload to user's folder
+            const storageRef = ref(storage, `avatars/${Auth.user.uid}/${Date.now()}_${file.name}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            
+            // Update Firebase Auth profile
+            const { updateProfile } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+            await updateProfile(Auth.user, { photoURL: downloadURL });
+            
+            // Update Firestore
+            if (FirebaseDB.initialized) {
+                const { doc, updateDoc } = FirebaseDB.firestore;
+                await updateDoc(doc(db, 'users', Auth.user.uid), {
+                    photoURL: downloadURL
+                });
+            }
+            
+            // Update UI
+            document.getElementById('profileAvatar').src = downloadURL;
+            document.getElementById('userAvatar').src = downloadURL;
+            
+            this.showToast('Đã cập nhật ảnh đại diện', 'success');
+        } catch (error) {
+            console.error('Upload avatar error:', error);
+            this.showToast('Lỗi tải ảnh: ' + error.message, 'error');
+        }
+        
+        // Clear input
+        input.value = '';
     },
     
     // Register Service Worker for PWA
