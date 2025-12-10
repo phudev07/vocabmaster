@@ -2469,7 +2469,7 @@ body {
 /* Chat Mobile */
 @media (max-width: 768px) {
     #chatView {
-        display: flex;
+        display: none;
         flex-direction: column;
         height: calc(100vh - 70px);
         padding: 0;
