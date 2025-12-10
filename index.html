@@ -14,6 +14,12 @@
 </head>
 <body>
     <!-- Header -->
+    <!-- Loading Overlay - shown until auth state is determined -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p>Đang tải...</p>
+    </div>
+
     <header class="header">
         <div class="header-left">
             <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
@@ -28,8 +34,8 @@
         </div>
         <div class="header-right">
             <!-- Login/User Area -->
-            <button id="loginBtn" class="btn btn-primary btn-sm" style="padding: 0.5rem 1rem;">
-                🔵 Đăng nhập
+            <button id="loginBtn" class="btn btn-primary btn-sm" style="padding: 0.5rem 1rem; display: none;">
+                Đăng nhập
             </button>
             <div id="userInfo" class="user-info" style="display: none; cursor: pointer;" onclick="App.showProfileModal()">
                 <img id="userAvatar" class="user-avatar" src="" alt="Avatar">
@@ -46,7 +52,110 @@
         </div>
     </header>
 
-    <!-- Sidebar -->
+    <!-- Landing Page (shown when not logged in) -->
+    <div class="landing-page" id="landingPage">
+        <!-- Hero Section -->
+        <section class="landing-hero">
+            <div class="hero-content">
+                <h1 class="hero-title">📚 VocabMaster</h1>
+                <p class="hero-subtitle">Ứng dụng học từ vựng tiếng Anh thông minh với hệ thống Spaced Repetition</p>
+                <button class="btn btn-hero btn-lg" id="landingLoginBtn">
+                    Đăng nhập với Google để bắt đầu
+                </button>
+            </div>
+        </section>
+
+        <!-- Mission & Vision -->
+        <section class="landing-section">
+            <div class="mission-cards">
+                <div class="mission-card">
+                    <div class="mission-icon">🎯</div>
+                    <h3>Sứ mệnh</h3>
+                    <p>Giúp người Việt học từ vựng tiếng Anh hiệu quả với phương pháp khoa học, không nhàm chán.</p>
+                </div>
+                <div class="mission-card">
+                    <div class="mission-icon">🚀</div>
+                    <h3>Tầm nhìn</h3>
+                    <p>Trở thành ứng dụng học từ vựng #1 Việt Nam với cộng đồng học tập cùng tiến.</p>
+                </div>
+                <div class="mission-card">
+                    <div class="mission-icon">💡</div>
+                    <h3>Phương pháp</h3>
+                    <p>Spaced Repetition System (SRS) - ôn tập đúng lúc, nhớ lâu hơn, tiết kiệm thời gian.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features -->
+        <section class="landing-section">
+            <h2 class="section-title">✨ Tính năng nổi bật</h2>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <span class="feature-icon">🔊</span>
+                    <span>Phát âm chuẩn US/UK</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📝</span>
+                    <span>Kiểm tra chính tả</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">🔥</span>
+                    <span>Streak & Gamification</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">☁️</span>
+                    <span>Đồng bộ đa thiết bị</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">🏆</span>
+                    <span>Achievements & Badges</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">📊</span>
+                    <span>Thống kê chi tiết</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Global Stats -->
+        <section class="landing-section">
+            <h2 class="section-title">📊 Thống kê cộng đồng</h2>
+            <div class="global-stats">
+                <div class="global-stat">
+                    <span class="global-stat-value" id="globalUsers">0</span>
+                    <span class="global-stat-label">Người dùng</span>
+                </div>
+                <div class="global-stat">
+                    <span class="global-stat-value" id="globalWords">0</span>
+                    <span class="global-stat-label">Từ vựng đã học</span>
+                </div>
+                <div class="global-stat">
+                    <span class="global-stat-value" id="globalOnline">0</span>
+                    <span class="global-stat-label">Đang online</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Leaderboard -->
+        <section class="landing-section">
+            <h2 class="section-title">🏆 Bảng xếp hạng</h2>
+            <div class="leaderboard" id="landingLeaderboard">
+                <div class="leaderboard-loading">Đang tải...</div>
+            </div>
+        </section>
+
+        <!-- CTA -->
+        <section class="landing-cta">
+            <h2>Sẵn sàng bắt đầu hành trình?</h2>
+            <button class="btn btn-hero btn-lg" onclick="Auth.signInWithGoogle()">
+                Đăng nhập ngay
+            </button>
+        </section>
+    </div>
+
+    <!-- App Container (shown when logged in) -->
+    <div class="app-container" id="appContainer" style="display: none;">
+        <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <h2>Chủ đề</h2>
@@ -117,22 +226,47 @@
             </div>
             
             <div class="dashboard-sections">
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h2>⚠️ Từ cần ôn tập hôm nay</h2>
-                        <button class="btn btn-primary" id="startReviewBtn">Ôn tập ngay</button>
+                <!-- Row 1: Due Words + Weekly Progress -->
+                <div class="dashboard-row">
+                    <div class="dashboard-section dashboard-section-half">
+                        <div class="section-header">
+                            <h2>⚠️ Từ cần ôn tập hôm nay</h2>
+                            <button class="btn btn-primary btn-sm" id="startReviewBtn">Ôn tập ngay</button>
+                        </div>
+                        <div class="due-words-preview" id="dueWordsPreview">
+                            <p class="empty-state">Không có từ nào cần ôn tập</p>
+                        </div>
                     </div>
-                    <div class="due-words-preview" id="dueWordsPreview">
-                        <p class="empty-state">Không có từ nào cần ôn tập</p>
+                    
+                    <div class="dashboard-section dashboard-section-half">
+                        <div class="section-header">
+                            <h2>📈 Tiến độ tuần này</h2>
+                        </div>
+                        <div class="weekly-chart" id="weeklyChart">
+                            <!-- Chart will be rendered here -->
+                        </div>
                     </div>
                 </div>
                 
-                <div class="dashboard-section">
-                    <div class="section-header">
-                        <h2>📈 Tiến độ tuần này</h2>
+                <!-- Row 2: Community Section -->
+                <div class="dashboard-row">
+                    <div class="dashboard-section dashboard-section-half">
+                        <div class="section-header">
+                            <h2>🟢 Đang online</h2>
+                            <span class="online-count" id="dashboardOnlineCount">0</span>
+                        </div>
+                        <div class="online-users-preview" id="dashboardOnlineUsers">
+                            <p class="empty-state">Đang tải...</p>
+                        </div>
                     </div>
-                    <div class="weekly-chart" id="weeklyChart">
-                        <!-- Chart will be rendered here -->
+                    
+                    <div class="dashboard-section dashboard-section-half">
+                        <div class="section-header">
+                            <h2>🏆 Top Users</h2>
+                        </div>
+                        <div class="leaderboard-preview" id="dashboardLeaderboard">
+                            <!-- Top 5 users will be rendered here -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -442,6 +576,10 @@
                         <span class="profile-stat-value" id="profileStreak">0</span>
                         <span class="profile-stat-label">Chuỗi ngày</span>
                     </div>
+                    <div class="profile-stat">
+                        <span class="profile-stat-value" id="profileFreezes">❄️3</span>
+                        <span class="profile-stat-label">Freeze</span>
+                    </div>
                 </div>
                 
                 <!-- Level Progress -->
@@ -452,6 +590,36 @@
                     </div>
                     <div class="level-bar">
                         <div class="level-fill" id="profileLevelFill" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <!-- Badges -->
+                <div class="profile-section">
+                    <h4>🏅 Huy chương</h4>
+                    <div class="badges-grid" id="profileBadges">
+                        <!-- Badges will be rendered here -->
+                    </div>
+                </div>
+                
+                <!-- Theme Colors -->
+                <div class="profile-section">
+                    <h4>🎨 Màu chủ đề</h4>
+                    <div class="theme-colors" id="themeColors">
+                        <button class="color-option active" data-color="" title="Indigo">
+                            <span style="background: #6366f1"></span>
+                        </button>
+                        <button class="color-option" data-color="emerald" title="Emerald">
+                            <span style="background: #10b981"></span>
+                        </button>
+                        <button class="color-option" data-color="rose" title="Rose">
+                            <span style="background: #f43f5e"></span>
+                        </button>
+                        <button class="color-option" data-color="amber" title="Amber">
+                            <span style="background: #f59e0b"></span>
+                        </button>
+                        <button class="color-option" data-color="cyan" title="Cyan">
+                            <span style="background: #06b6d4"></span>
+                        </button>
                     </div>
                 </div>
                 
@@ -468,8 +636,10 @@
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary modal-close">Đóng</button>
                 <button type="button" class="btn btn-danger" id="profileLogoutBtn">🚪 Đăng xuất</button>
-            </div>
         </div>
+    </div>
+
+    <!-- Close App Container -->
     </div>
 
     <!-- Toast Notification -->
@@ -486,6 +656,8 @@
     <script src="js/vocabulary.js"></script>
     <script src="js/review.js"></script>
     <script src="js/test.js"></script>
+    <script src="js/achievements.js"></script>
+    <script src="js/leaderboard.js"></script>
     <script src="js/notifications.js"></script>
     <script src="js/app.js"></script>
 </body>

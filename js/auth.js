@@ -32,6 +32,7 @@ const Auth = {
                     this.user = user;
                     this.initialized = true;
                     this.updateUI();
+                    this.hideLoadingOverlay();
                     
                     if (user) {
                         console.log('User signed in:', user.displayName);
@@ -94,23 +95,38 @@ const Auth = {
         }
     },
     
+    // Hide loading overlay
+    hideLoadingOverlay() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+        }
+    },
+    
     // Update UI based on auth state
     updateUI() {
         const loginBtn = document.getElementById('loginBtn');
         const userInfo = document.getElementById('userInfo');
         const userName = document.getElementById('userName');
         const userAvatar = document.getElementById('userAvatar');
+        const landingPage = document.getElementById('landingPage');
+        const appContainer = document.getElementById('appContainer');
+        
+        // Always hide header login button (landing page has its own)
+        if (loginBtn) loginBtn.style.display = 'none';
         
         if (this.user) {
-            // Logged in
-            if (loginBtn) loginBtn.style.display = 'none';
+            // Logged in - Show app, hide landing
             if (userInfo) userInfo.style.display = 'flex';
             if (userName) userName.textContent = this.user.displayName || 'User';
             if (userAvatar) userAvatar.src = this.user.photoURL || '';
+            if (landingPage) landingPage.style.display = 'none';
+            if (appContainer) appContainer.style.display = 'flex';
         } else {
-            // Logged out
-            if (loginBtn) loginBtn.style.display = 'flex';
+            // Logged out - Show landing, hide app
             if (userInfo) userInfo.style.display = 'none';
+            if (landingPage) landingPage.style.display = 'block';
+            if (appContainer) appContainer.style.display = 'none';
         }
     },
     

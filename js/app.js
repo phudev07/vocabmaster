@@ -10,9 +10,6 @@ const App = {
     async init() {
         console.log('VocabMaster initializing...');
         
-        // Show loading state
-        this.showToast('Đang kết nối...', 'warning');
-        
         // Initialize Firebase first
         try {
             await FirebaseDB.init();
@@ -25,19 +22,25 @@ const App = {
             await Auth.init();
             if (Auth.isLoggedIn()) {
                 this.showToast(`Xin chào, ${Auth.user.displayName}!`, 'success');
-            } else {
-                this.showToast('Vui lòng đăng nhập để đồng bộ', 'warning');
             }
         } catch (error) {
             console.log('Auth not available');
         }
         
-        // Initialize modules
+        // Initialize Leaderboard (for landing page and dashboard)
+        try {
+            await Leaderboard.init();
+        } catch (error) {
+            console.log('Leaderboard not available');
+        }
+        
+        // Initialize modules (only if logged in, otherwise they won't render)
         Speech.init();
         Topics.init();
         Vocabulary.init();
         Review.init();
         Test.init();
+        Achievements.init();
         
         // Load theme
         this.loadTheme();
@@ -85,6 +88,14 @@ const App = {
         const loginBtn = document.getElementById('loginBtn');
         if (loginBtn) {
             loginBtn.addEventListener('click', async () => {
+                await Auth.signInWithGoogle();
+            });
+        }
+        
+        // Landing page login button
+        const landingLoginBtn = document.getElementById('landingLoginBtn');
+        if (landingLoginBtn) {
+            landingLoginBtn.addEventListener('click', async () => {
                 await Auth.signInWithGoogle();
             });
         }
@@ -225,7 +236,13 @@ const App = {
     loadTheme() {
         const settings = Storage.getSettings();
         const theme = settings.theme || 'dark';
+        const color = settings.colorTheme || '';
+        
         document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.setAttribute('data-color', color);
+        
+        // Update color selector active state
+        this.updateColorSelector(color);
     },
 
     // Toggle theme
@@ -234,7 +251,29 @@ const App = {
         const newTheme = current === 'dark' ? 'light' : 'dark';
         
         document.documentElement.setAttribute('data-theme', newTheme);
-        Storage.saveSettings({ theme: newTheme });
+        const settings = Storage.getSettings();
+        settings.theme = newTheme;
+        Storage.saveSettings(settings);
+    },
+    
+    // Set color theme
+    setColorTheme(color) {
+        document.documentElement.setAttribute('data-color', color);
+        const settings = Storage.getSettings();
+        settings.colorTheme = color;
+        Storage.saveSettings(settings);
+        
+        this.updateColorSelector(color);
+    },
+    
+    // Update color selector active state
+    updateColorSelector(color) {
+        const container = document.getElementById('themeColors');
+        if (!container) return;
+        
+        container.querySelectorAll('.color-option').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.color === color);
+        });
     },
 
     // Show toast notification
@@ -291,6 +330,11 @@ const App = {
         document.getElementById('profileMastered').textContent = stats.masteredWords;
         document.getElementById('profileStreak').textContent = stats.streak;
         
+        // Display freeze count
+        const localStats = Storage.getStats();
+        const freezes = localStats.freezesRemaining !== undefined ? localStats.freezesRemaining : 3;
+        document.getElementById('profileFreezes').textContent = `❄️${freezes}`;
+        
         // Calculate level and XP
         const xp = stats.totalWords * 10 + stats.masteredWords * 50 + stats.streak * 5;
         const levels = [
@@ -328,6 +372,9 @@ const App = {
         document.getElementById('profileTestCount').textContent = Storage.getStats().testCount || 0;
         document.getElementById('profileAccuracy').textContent = `${Stats.getAccuracyRate()}%`;
         
+        // Render badges
+        Achievements.renderProfileBadges();
+        
         // Show modal
         document.getElementById('profileModal').classList.add('active');
         
@@ -336,6 +383,19 @@ const App = {
             document.getElementById('profileModal').classList.remove('active');
             await Auth.signOut();
         };
+        
+        // Color theme handlers
+        const colorContainer = document.getElementById('themeColors');
+        if (colorContainer) {
+            colorContainer.querySelectorAll('.color-option').forEach(btn => {
+                btn.onclick = () => {
+                    this.setColorTheme(btn.dataset.color);
+                };
+            });
+            // Update active state
+            const currentColor = document.documentElement.getAttribute('data-color') || '';
+            this.updateColorSelector(currentColor);
+        }
     },
     
     // Register Service Worker for PWA

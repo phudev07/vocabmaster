@@ -45,6 +45,19 @@ const Stats = {
         const stats = Storage.getStats();
         const today = new Date();
         const todayStr = today.toISOString().split('T')[0];
+        const currentMonth = today.getMonth();
+        
+        // Reset monthly freezes if new month
+        if (stats.freezeMonth !== currentMonth) {
+            stats.freezeMonth = currentMonth;
+            stats.freezesRemaining = 3;
+        }
+        
+        // Initialize freezes if not set
+        if (stats.freezesRemaining === undefined) {
+            stats.freezesRemaining = 3;
+            stats.freezeMonth = currentMonth;
+        }
         
         // Update streak
         if (stats.lastStudyDate) {
@@ -56,8 +69,17 @@ const Stats = {
             } else if (daysDiff === 1) {
                 // Consecutive day, increase streak
                 stats.streak = (stats.streak || 0) + 1;
+            } else if (daysDiff === 2 && stats.freezesRemaining > 0) {
+                // Missed 1 day but have freeze - use it!
+                stats.freezesRemaining--;
+                stats.streak = (stats.streak || 0) + 1;
+                stats.freezesUsed = (stats.freezesUsed || 0) + 1;
+                App.showToast(`❄️ Đã dùng 1 Streak Freeze! Còn ${stats.freezesRemaining} freeze`, 'warning');
             } else {
-                // Streak broken
+                // Streak broken (missed more than 1 day or no freeze left)
+                if (daysDiff > 1 && stats.streak > 0) {
+                    App.showToast(`😢 Streak ${stats.streak} ngày đã bị reset!`, 'error');
+                }
                 stats.streak = 1;
             }
         } else {
