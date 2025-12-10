@@ -43,6 +43,9 @@ const App = {
         Achievements.init();
         Chat.init();
         Admin.init();
+        Import.init();
+        PrivateChat.init();
+        Challenges.init();
         
         // Load theme
         this.loadTheme();
@@ -195,6 +198,18 @@ const App = {
                     // Load users for admin panel
                     if (typeof Admin !== 'undefined') {
                         Admin.fetchAllUsers().then(() => Admin.renderUsers());
+                    }
+                } else if (view === 'inbox') {
+                    this.showView('inboxView');
+                    // Load conversations
+                    if (typeof PrivateChat !== 'undefined') {
+                        PrivateChat.fetchConversations().then(() => PrivateChat.renderConversations());
+                    }
+                } else if (view === 'challenges') {
+                    this.showView('challengesView');
+                    // Load challenges
+                    if (typeof Challenges !== 'undefined') {
+                        Challenges.fetchChallenges().then(() => Challenges.render());
                     }
                 }
                 
@@ -517,6 +532,53 @@ const App = {
         
         // Clear input
         input.value = '';
+    },
+    
+    // Show another user's profile
+    async showUserProfile(userId) {
+        if (!FirebaseDB.initialized) return;
+        
+        try {
+            const { doc, getDoc } = FirebaseDB.firestore;
+            const userDoc = await getDoc(doc(db, 'users', userId));
+            
+            if (!userDoc.exists()) {
+                this.showToast('Không tìm thấy người dùng', 'error');
+                return;
+            }
+            
+            const user = userDoc.data();
+            
+            // Populate user profile modal
+            document.getElementById('viewUserAvatar').src = user.photoURL || '';
+            document.getElementById('viewUserName').textContent = user.displayName || 'Unknown';
+            document.getElementById('viewUserXP').textContent = user.xp || 0;
+            document.getElementById('viewUserStreak').textContent = user.streak || 0;
+            document.getElementById('viewUserWords').textContent = user.totalWords || 0;
+            document.getElementById('viewUserMastered').textContent = user.masteredWords || 0;
+            
+            // Set button actions
+            document.getElementById('viewUserMessageBtn').onclick = () => {
+                // Close all modals
+                document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
+                PrivateChat.startConversation(userId);
+            };
+            
+            document.getElementById('viewUserChallengeBtn').onclick = () => {
+                document.getElementById('viewUserModal').classList.remove('active');
+                Challenges.openCreateModal(userId);
+            };
+            
+            // Hide buttons if viewing own profile
+            const isOwn = userId === Auth.user?.uid;
+            document.getElementById('viewUserActions').style.display = isOwn ? 'none' : 'flex';
+            
+            document.getElementById('viewUserModal').classList.add('active');
+            
+        } catch (error) {
+            console.error('Show user profile error:', error);
+            this.showToast('Lỗi tải thông tin người dùng', 'error');
+        }
     },
     
     // Register Service Worker for PWA

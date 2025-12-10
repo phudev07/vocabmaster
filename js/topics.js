@@ -109,6 +109,14 @@ const Topics = {
         
         // Switch to topic view
         App.showView('topicView');
+        
+        // Close sidebar on mobile
+        if (window.innerWidth <= 768) {
+            const sidebar = document.querySelector('.sidebar');
+            if (sidebar) {
+                sidebar.classList.remove('open');
+            }
+        }
     },
 
     // Open topic modal for add/edit

@@ -26,6 +26,28 @@ const Test = {
         App.showView('testView');
     },
 
+    // Challenge mode callback
+    challengeCallback: null,
+
+    // Start challenge test with words and callback
+    startChallenge(words, onComplete) {
+        if (!words || words.length === 0) {
+            App.showToast('Không có từ nào để kiểm tra', 'warning');
+            if (onComplete) onComplete(0);
+            return;
+        }
+
+        this.challengeCallback = onComplete;
+        this.words = this.shuffle([...words]);
+        this.currentIndex = 0;
+        this.correctCount = 0;
+        this.wrongWords = [];
+        this.isAnswered = false;
+
+        this.render();
+        App.showView('testView');
+    },
+
     // Shuffle array
     shuffle(array) {
         for (let i = array.length - 1; i > 0; i--) {
@@ -184,6 +206,12 @@ const Test = {
             icon.textContent = '👍';
         } else {
             icon.textContent = '💪';
+        }
+        
+        // Call challenge callback if exists
+        if (this.challengeCallback) {
+            this.challengeCallback(this.correctCount);
+            this.challengeCallback = null;
         }
         
         App.showView('testResultView');

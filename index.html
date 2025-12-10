@@ -184,6 +184,15 @@
                 <span class="nav-icon">💬</span>
                 <span class="nav-text">Chat cộng đồng</span>
             </button>
+            <button class="nav-item" data-view="inbox">
+                <span class="nav-icon">📬</span>
+                <span class="nav-text">Tin nhắn</span>
+                <span class="nav-badge" id="inboxBadge" style="display: none;">0</span>
+            </button>
+            <button class="nav-item" data-view="challenges">
+                <span class="nav-icon">⚔️</span>
+                <span class="nav-text">Thách đấu</span>
+            </button>
             <button class="nav-item" data-view="admin" id="adminNavItem" style="display: none;">
                 <span class="nav-icon">⚙️</span>
                 <span class="nav-text">Admin Panel</span>
@@ -322,6 +331,47 @@
             </div>
         </section>
 
+        <!-- Challenges View -->
+        <section class="view" id="challengesView">
+            <div class="view-header">
+                <h1>⚔️ Thách đấu</h1>
+                <button class="btn btn-primary" id="createChallengeBtn">
+                    <span>+</span> Tạo thách đấu
+                </button>
+            </div>
+            <div id="challengesList" class="challenges-list">
+                <p class="empty-state">Đang tải...</p>
+            </div>
+        </section>
+
+        <!-- Inbox View -->
+        <section class="view" id="inboxView">
+            <div class="view-header">
+                <h1>📬 Tin nhắn</h1>
+            </div>
+            <div id="conversationsList" class="conversations-list">
+                <p class="empty-state">Đang tải...</p>
+            </div>
+        </section>
+
+        <!-- Private Chat View -->
+        <section class="view" id="privateChatView">
+            <div class="private-chat-header">
+                <button class="btn-icon" id="privateChatBack" title="Quay lại">←</button>
+                <img src="" alt="" class="private-chat-avatar" id="privateChatAvatar">
+                <span class="private-chat-name" id="privateChatTitle">Chat</span>
+            </div>
+            <div class="private-chat-container">
+                <div class="private-messages" id="privateMessages">
+                    <p class="empty-state">Đang tải...</p>
+                </div>
+                <form class="private-form" id="privateForm">
+                    <input type="text" id="privateInput" placeholder="Nhập tin nhắn..." autocomplete="off" maxlength="500">
+                    <button type="submit" class="btn btn-primary">Gửi</button>
+                </form>
+            </div>
+        </section>
+
         <!-- Topic View -->
         <section class="view" id="topicView">
             <div class="view-header">
@@ -335,6 +385,9 @@
                     </button>
                     <button class="btn btn-secondary" id="testTopicBtn">
                         <span>✍️</span> Kiểm tra
+                    </button>
+                    <button class="btn btn-secondary" id="openImportBtn" onclick="Import.openModal()">
+                        <span>📥</span> Import
                     </button>
                     <button class="btn btn-primary" id="addWordBtn">
                         <span>+</span> Thêm từ
@@ -505,6 +558,72 @@
         </div>
     </div>
 
+    <!-- Modal: Create Challenge -->
+    <div class="modal" id="challengeModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚔️ Tạo thách đấu</h2>
+                <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
+            </div>
+            <div class="form-group">
+                <label>Chọn đối thủ (click để chọn)</label>
+                <div id="challengeOpponentList" class="opponent-list">
+                    <!-- Users will be populated with avatars -->
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Chọn Topic</label>
+                <select id="challengeTopicSelect" class="form-select">
+                    <!-- Topics will be populated -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Số từ</label>
+                <input type="number" id="challengeWordCount" class="form-input" value="10" min="5" max="50">
+            </div>
+            <input type="hidden" id="challengeOpponentId">
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary modal-close">Hủy</button>
+                <button type="button" class="btn btn-primary" id="sendChallengeBtn">Gửi thách đấu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Import CSV -->
+    <div class="modal" id="importModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>📥 Import từ vựng</h2>
+                <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
+            </div>
+            <div class="form-group">
+                <label>Chọn file CSV hoặc Excel</label>
+                <input type="file" id="importFile" accept=".csv,.txt,.xlsx,.xls" class="file-input">
+                <p class="form-hint">Format: cột 1 = English, cột 2 = Vietnamese</p>
+            </div>
+            <div class="form-group">
+                <label>Import vào Topic</label>
+                <select id="importTopicSelect" class="form-select">
+                    <!-- Topics will be populated -->
+                </select>
+            </div>
+            <div class="import-preview-container">
+                <div class="import-preview-header">
+                    <span>Xem trước (<span id="importCount">0</span> từ)</span>
+                </div>
+                <div id="importPreview" class="import-preview">
+                    <p class="empty-state">Chọn file CSV để xem trước</p>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary modal-close">Hủy</button>
+                <button type="button" class="btn btn-primary" id="executeImportBtn" disabled>Import</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: Add/Edit Word -->
     <div class="modal" id="wordModal">
         <div class="modal-overlay"></div>
@@ -614,6 +733,45 @@
                     <button type="submit" class="btn btn-primary">Lưu</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal: View User Profile -->
+    <div class="modal" id="viewUserModal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Thông tin người dùng</h2>
+                <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
+            </div>
+            <div class="view-user-content">
+                <div class="view-user-header">
+                    <img src="" alt="" class="view-user-avatar" id="viewUserAvatar">
+                    <div class="view-user-name" id="viewUserName">Name</div>
+                </div>
+                <div class="view-user-stats">
+                    <div class="view-user-stat">
+                        <span class="stat-value" id="viewUserXP">0</span>
+                        <span class="stat-label">XP</span>
+                    </div>
+                    <div class="view-user-stat">
+                        <span class="stat-value" id="viewUserStreak">0</span>
+                        <span class="stat-label">🔥 Streak</span>
+                    </div>
+                    <div class="view-user-stat">
+                        <span class="stat-value" id="viewUserWords">0</span>
+                        <span class="stat-label">Từ vựng</span>
+                    </div>
+                    <div class="view-user-stat">
+                        <span class="stat-value" id="viewUserMastered">0</span>
+                        <span class="stat-label">Đã thuộc</span>
+                    </div>
+                </div>
+                <div class="view-user-actions" id="viewUserActions">
+                    <button class="btn btn-secondary" id="viewUserMessageBtn">💬 Nhắn tin</button>
+                    <button class="btn btn-primary" id="viewUserChallengeBtn">⚔️ Thách đấu</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -769,6 +927,9 @@
     <script src="js/leaderboard.js"></script>
     <script src="js/chat.js"></script>
     <script src="js/admin.js"></script>
+    <script src="js/import.js"></script>
+    <script src="js/privateChat.js"></script>
+    <script src="js/challenges.js"></script>
     <script src="js/notifications.js"></script>
     <script src="js/app.js"></script>
 </body>

@@ -41,14 +41,14 @@ const FirebaseDB = {
         try {
             // Import Firebase modules
             const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-            const { getFirestore, collection, doc, getDocs, getDoc, setDoc, deleteDoc, onSnapshot, addDoc, updateDoc, query, orderBy, limit, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const { getFirestore, collection, doc, getDocs, getDoc, setDoc, deleteDoc, onSnapshot, addDoc, updateDoc, query, orderBy, limit, serverTimestamp, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
             
             // Initialize app
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             
             // Store Firestore functions
-            this.firestore = { collection, doc, getDocs, getDoc, setDoc, deleteDoc, onSnapshot, addDoc, updateDoc, query, orderBy, limit, serverTimestamp };
+            this.firestore = { collection, doc, getDocs, getDoc, setDoc, deleteDoc, onSnapshot, addDoc, updateDoc, query, orderBy, limit, serverTimestamp, where };
             
             this.initialized = true;
             console.log('Firebase initialized');

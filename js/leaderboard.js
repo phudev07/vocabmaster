@@ -150,7 +150,7 @@ const Leaderboard = {
             const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
             
             return `
-                <div class="leaderboard-item">
+                <div class="leaderboard-item" onclick="App.showUserProfile('${user.id}')" style="cursor: pointer;">
                     <span class="leaderboard-rank ${rankClass}">${rankIcon}</span>
                     <img class="leaderboard-avatar" src="${user.avatar || 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%236366f1%22/><text x=%2250%22 y=%2265%22 font-size=%2240%22 text-anchor=%22middle%22 fill=%22white%22>${user.name.charAt(0)}</text></svg>'}" alt="${user.name}">
                     <div class="leaderboard-info">
@@ -179,7 +179,7 @@ const Leaderboard = {
             const isCurrentUser = Auth.isLoggedIn() && user.id === Auth.user.uid;
             
             return `
-                <div class="leaderboard-item ${isCurrentUser ? 'current-user' : ''}">
+                <div class="leaderboard-item ${isCurrentUser ? 'current-user' : ''}" onclick="App.showUserProfile('${user.id}')" style="cursor: pointer;">
                     <span class="leaderboard-rank">${rankIcon}</span>
                     <img class="leaderboard-avatar" src="${user.avatar || ''}" alt="${user.name}">
                     <div class="leaderboard-info">

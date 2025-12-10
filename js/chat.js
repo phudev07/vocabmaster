@@ -99,9 +99,9 @@ const Chat = {
             
             return `
                 <div class="chat-message ${isOwn ? 'own' : ''}" data-id="${msg.id}">
-                    ${!isOwn ? `<img class="chat-avatar" src="${msg.userAvatar || ''}" alt="${msg.userName}">` : ''}
+                    ${!isOwn ? `<img class="chat-avatar clickable-avatar" src="${msg.userAvatar || ''}" alt="${msg.userName}" onclick="App.showUserProfile('${msg.userId}')" title="Xem thông tin">` : ''}
                     <div class="chat-bubble">
-                        ${!isOwn ? `<div class="chat-sender">${msg.userName}</div>` : ''}
+                        ${!isOwn ? `<div class="chat-sender clickable-name" onclick="App.showUserProfile('${msg.userId}')">${msg.userName}</div>` : ''}
                         <div class="chat-text">${this.escapeHtml(msg.text)}</div>
                         <div class="chat-meta">
                             <span class="chat-time">${time}</span>

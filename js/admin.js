@@ -209,6 +209,52 @@ const Admin = {
         }
     },
     
+    // Ban user
+    async banUser(uid) {
+        try {
+            const { doc, updateDoc } = FirebaseDB.firestore;
+            await updateDoc(doc(db, 'users', uid), { isBanned: true });
+            App.showToast('Đã ban user', 'success');
+            await this.fetchAllUsers();
+            this.renderUsers();
+            return true;
+        } catch (error) {
+            console.error('Ban user error:', error);
+            App.showToast('Lỗi ban user', 'error');
+            return false;
+        }
+    },
+    
+    // Unban user
+    async unbanUser(uid) {
+        try {
+            const { doc, updateDoc } = FirebaseDB.firestore;
+            await updateDoc(doc(db, 'users', uid), { isBanned: false });
+            App.showToast('Đã unban user', 'success');
+            await this.fetchAllUsers();
+            this.renderUsers();
+            return true;
+        } catch (error) {
+            console.error('Unban user error:', error);
+            App.showToast('Lỗi unban user', 'error');
+            return false;
+        }
+    },
+    
+    // Toggle ban status
+    toggleBan(uid) {
+        const user = this.users.find(u => u.id === uid);
+        if (!user) return;
+        
+        if (user.isBanned) {
+            this.unbanUser(uid);
+        } else {
+            if (confirm(`Ban user "${user.displayName}"? User sẽ không thể chat.`)) {
+                this.banUser(uid);
+            }
+        }
+    },
+    
     // Render users tab
     renderUsers() {
         const container = document.getElementById('adminUsersList');
@@ -228,24 +274,26 @@ const Admin = {
                         <th>Email</th>
                         <th>XP</th>
                         <th>Streak</th>
-                        <th>Freeze</th>
-                        <th>Admin</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     ${this.users.map(user => `
-                        <tr data-uid="${user.id}">
+                        <tr data-uid="${user.id}" class="${user.isBanned ? 'banned-user' : ''}">
                             <td><img src="${user.photoURL || ''}" class="admin-avatar" alt=""></td>
-                            <td>${user.displayName || 'N/A'}</td>
+                            <td>
+                                ${user.displayName || 'N/A'}
+                                ${user.isAdmin ? '<span class="admin-badge">Admin</span>' : ''}
+                            </td>
                             <td>${user.email || 'N/A'}</td>
                             <td>${user.xp || 0}</td>
                             <td>${user.streak || 0}</td>
-                            <td>${user.freezeCount || 0}</td>
-                            <td>${user.isAdmin ? '✅' : ''}</td>
+                            <td>${user.isBanned ? '<span class="banned-badge">🚫 Banned</span>' : '<span class="active-badge">✅ Active</span>'}</td>
                             <td class="admin-actions">
                                 <button class="btn-icon" onclick="Admin.openEditUser('${user.id}')" title="Sửa">✏️</button>
                                 <button class="btn-icon" onclick="Admin.openUserData('${user.id}')" title="Xem data">📁</button>
+                                <button class="btn-icon" onclick="Admin.toggleBan('${user.id}')" title="${user.isBanned ? 'Unban' : 'Ban'}">${user.isBanned ? '✅' : '🚫'}</button>
                                 <button class="btn-icon" onclick="Admin.confirmDeleteUser('${user.id}')" title="Xóa">🗑️</button>
                             </td>
                         </tr>
