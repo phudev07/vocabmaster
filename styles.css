@@ -2466,6 +2466,153 @@ body {
     50% { opacity: 0.5; }
 }
 
+/* ========================================
+   Admin Panel
+   ======================================== */
+.admin-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+
+.admin-tab {
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-tertiary);
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.9375rem;
+    transition: var(--transition-fast);
+}
+
+.admin-tab:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.admin-tab.active {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.admin-tab-content {
+    display: none;
+}
+
+.admin-tab-content.active {
+    display: block;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.admin-table th,
+.admin-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.admin-table th {
+    background: var(--bg-tertiary);
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.admin-table tr:hover {
+    background: var(--bg-tertiary);
+}
+
+.admin-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.admin-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.admin-message {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.admin-message:hover {
+    background: var(--bg-tertiary);
+}
+
+.admin-message-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 120px;
+}
+
+.admin-message-time {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.admin-message-text {
+    flex: 1;
+    color: var(--text-secondary);
+}
+
+.admin-message-delete {
+    flex-shrink: 0;
+}
+
+.user-data-container {
+    padding: 1rem 1.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.user-data-container h4 {
+    margin: 1rem 0 0.5rem;
+    color: var(--text-primary);
+}
+
+.user-data-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.user-data-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-primary);
+}
+
 /* Chat Mobile */
 @media (max-width: 768px) {
     #chatView {

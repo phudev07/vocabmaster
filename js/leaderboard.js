@@ -56,7 +56,7 @@ const Leaderboard = {
                 masteredWords: stats.masteredWords,
                 streak: stats.streak,
                 lastActive: new Date().toISOString()
-            });
+            }, { merge: true });
             
             console.log('User profile updated');
         } catch (error) {

@@ -42,6 +42,7 @@ const App = {
         Test.init();
         Achievements.init();
         Chat.init();
+        Admin.init();
         
         // Load theme
         this.loadTheme();
@@ -188,6 +189,12 @@ const App = {
                         if (onlineCount && typeof Leaderboard !== 'undefined') {
                             onlineCount.textContent = Leaderboard.getOnlineCount();
                         }
+                    }
+                } else if (view === 'admin') {
+                    this.showView('adminView');
+                    // Load users for admin panel
+                    if (typeof Admin !== 'undefined') {
+                        Admin.fetchAllUsers().then(() => Admin.renderUsers());
                     }
                 }
                 
