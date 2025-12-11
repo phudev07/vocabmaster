@@ -39,13 +39,11 @@ const Review = {
             </p>
             <div class="study-list" id="studyList">
                 ${this.words.map((word, index) => `
-                    <div class="study-word-card">
-                        <div class="study-word-number">${index + 1}</div>
-                        <button class="word-speak" onclick="Speech.speak('${this.escapeHtml(word.english)}')">🔊</button>
-                        <div class="study-word-content">
-                            <span class="study-word-english">${this.escapeHtml(word.english)}</span>
-                            <span class="study-word-vietnamese">${this.escapeHtml(word.vietnamese)}</span>
-                        </div>
+                    <div class="study-word-row">
+                        <span class="study-word-number">${index + 1}</span>
+                        <button class="study-word-speak" onclick="Speech.speak('${this.escapeHtml(word.english)}')">🔊</button>
+                        <span class="study-word-english">${this.escapeHtml(word.english)}</span>
+                        <span class="study-word-vietnamese">${this.escapeHtml(word.vietnamese)}</span>
                     </div>
                 `).join('')}
             </div>
@@ -254,21 +252,22 @@ const Review = {
     // Initialize event listeners
     init() {
         document.getElementById('startReviewBtn').addEventListener('click', () => {
-            this.openConfigModal('review', Storage.getDueWords());
+            // Start directly without config modal
+            this.start(Storage.getDueWords());
         });
 
         document.getElementById('startDueReviewBtn').addEventListener('click', () => {
-            this.openConfigModal('review', Storage.getDueWords());
+            this.start(Storage.getDueWords());
         });
 
         document.getElementById('reviewTopicBtn').addEventListener('click', () => {
             if (!Topics.currentTopicId) return;
             const words = Storage.getWordsByTopic(Topics.currentTopicId);
-            this.openConfigModal('review', words);
+            this.start(words);
         });
 
         document.getElementById('reviewAllBtn').addEventListener('click', () => {
-            this.openConfigModal('review', Storage.getAllWords());
+            this.start(Storage.getAllWords());
         });
     },
 

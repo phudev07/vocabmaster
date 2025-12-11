@@ -10,8 +10,8 @@ const Auth = {
     // Initialize Auth
     async init() {
         try {
-            const { getAuth, onAuthStateChanged, GoogleAuthProvider } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-            const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+            const { getAuth, onAuthStateChanged, GoogleAuthProvider, browserLocalPersistence, setPersistence, getRedirectResult } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+            const { initializeApp, getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
             
             const firebaseConfig = {
                 apiKey: "AIzaSyDBZz76elwCKWLtGRRiPntj4CFbmty9tmk",
@@ -22,19 +22,40 @@ const Auth = {
                 appId: "1:816895415090:web:5fcf52a0ea39f49e6d3d2b"
             };
             
-            const app = initializeApp(firebaseConfig, 'auth-app');
+            // Use existing app or create new one (avoid duplicate initialization)
+            let app;
+            if (getApps().length === 0) {
+                app = initializeApp(firebaseConfig);
+            } else {
+                app = getApp();
+            }
+            
             this.auth = getAuth(app);
             this.provider = new GoogleAuthProvider();
             
-            // Handle redirect result (for PWA/iOS)
-            const { getRedirectResult } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+            // Set persistence to LOCAL (important for PWA)
+            try {
+                await setPersistence(this.auth, browserLocalPersistence);
+                console.log('Auth persistence set to LOCAL');
+            } catch (persistenceError) {
+                console.log('Persistence error (non-critical):', persistenceError);
+            }
+            
+            // Handle redirect result FIRST before setting up listener
+            // This is crucial for PWA/redirect-based login
             try {
                 const result = await getRedirectResult(this.auth);
                 if (result && result.user) {
                     console.log('Redirect login successful:', result.user.displayName);
+                    // Show success toast after a short delay
+                    setTimeout(() => {
+                        if (typeof App !== 'undefined') {
+                            App.showToast(`Xin chào, ${result.user.displayName}! 👋`, 'success');
+                        }
+                    }, 500);
                 }
             } catch (redirectError) {
-                console.log('No redirect result or error:', redirectError);
+                console.log('No redirect result or error:', redirectError.code || redirectError.message);
             }
             
             // Listen for auth state changes
