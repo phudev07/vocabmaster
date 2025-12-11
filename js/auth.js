@@ -97,21 +97,40 @@ const Auth = {
                document.referrer.includes('android-app://');
     },
     
+    // Check if iOS
+    isIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    },
+    
     // Sign in with Google
     async signInWithGoogle() {
         try {
-            // Use redirect for PWA/iOS standalone mode (popup doesn't work)
+            // iOS PWA: Try popup first (sometimes works), fallback to instructions
+            if (this.isStandalone() && this.isIOS()) {
+                try {
+                    const { signInWithPopup } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+                    const result = await signInWithPopup(this.auth, this.provider);
+                    App.showToast(`Xin chào, ${result.user.displayName}! 👋`, 'success');
+                    return result.user;
+                } catch (iosError) {
+                    console.log('iOS popup failed, showing instructions:', iosError.code);
+                    this.showIOSLoginHelp();
+                    return null;
+                }
+            }
+            
+            // Android PWA: Use redirect
             if (this.isStandalone()) {
                 const { signInWithRedirect } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
                 await signInWithRedirect(this.auth, this.provider);
-                return null; // Will redirect, so no result here
-            } else {
-                // Use popup for regular browser
-                const { signInWithPopup } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-                const result = await signInWithPopup(this.auth, this.provider);
-                App.showToast(`Xin chào, ${result.user.displayName}! 👋`, 'success');
-                return result.user;
+                return null;
             }
+            
+            // Regular browser: Use popup
+            const { signInWithPopup } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+            const result = await signInWithPopup(this.auth, this.provider);
+            App.showToast(`Xin chào, ${result.user.displayName}! 👋`, 'success');
+            return result.user;
         } catch (error) {
             console.error('Sign in error:', error);
             if (error.code === 'auth/popup-closed-by-user') {
@@ -125,6 +144,56 @@ const Auth = {
             }
             return null;
         }
+    },
+    
+    // Show iOS login help modal
+    showIOSLoginHelp() {
+        const existingModal = document.getElementById('iosLoginModal');
+        if (existingModal) existingModal.remove();
+        
+        const modal = document.createElement('div');
+        modal.id = 'iosLoginModal';
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-overlay"></div>
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2>🍎 Đăng nhập trên iOS</h2>
+                    <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
+                </div>
+                <div style="padding: 1.5rem;">
+                    <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                        Do hạn chế của iOS, bạn cần đăng nhập qua Safari trước:
+                    </p>
+                    <ol style="padding-left: 1.25rem; line-height: 1.8; color: var(--text-primary);">
+                        <li>Mở <strong>Safari</strong> và truy cập trang web này</li>
+                        <li>Đăng nhập bằng Google trên Safari</li>
+                        <li>Sau đó quay lại app này và <strong>làm mới trang</strong></li>
+                    </ol>
+                    <div style="margin-top: 1.5rem; display: flex; gap: 0.75rem;">
+                        <button class="btn btn-secondary modal-close" style="flex: 1;">Đóng</button>
+                        <button class="btn btn-primary" id="openInSafariBtn" style="flex: 1;">Mở Safari</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Close button
+        modal.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', () => modal.remove());
+        });
+        
+        // Open in Safari button
+        document.getElementById('openInSafariBtn').addEventListener('click', () => {
+            // Open current URL in Safari (will open outside PWA)
+            window.open(window.location.href, '_blank');
+            modal.remove();
+        });
+        
+        // Close on overlay click
+        modal.querySelector('.modal-overlay').addEventListener('click', () => modal.remove());
     },
     
     // Sign out
