@@ -263,6 +263,11 @@ const App = {
         if (view) {
             view.classList.add('active');
             this.currentView = viewId;
+            
+            // Mark chat as seen when switching to chat view
+            if (viewId === 'chatView' && typeof Chat !== 'undefined') {
+                Chat.markChatAsSeen();
+            }
         }
     },
 

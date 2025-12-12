@@ -144,5 +144,137 @@ const Notifications = {
     // Check if notifications are enabled
     isEnabled() {
         return Notification.permission === 'granted';
+    },
+    
+    // ========================================
+    // Sound Notifications & Badge Counts
+    // ========================================
+    
+    // Track seen challenges to avoid duplicate sounds
+    seenChallenges: new Set(),
+    lastMessageId: null,
+    badgeCounts: { challenges: 0 },
+    
+    // Play notification sound using Web Audio API
+    playSound(type = 'notification') {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Different tones for different notifications
+            if (type === 'challenge') {
+                oscillator.frequency.value = 440; // A4
+                oscillator.type = 'sine';
+            } else if (type === 'message') {
+                oscillator.frequency.value = 523; // C5
+                oscillator.type = 'sine';
+            } else {
+                oscillator.frequency.value = 600;
+                oscillator.type = 'sine';
+            }
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+            
+            // Vibrate on mobile if supported
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+            }
+        } catch (e) {
+            console.log('Audio not supported');
+        }
+    },
+    
+    // Check for new challenges and update badge/sound
+    checkNewChallenges(challenges) {
+        if (!Auth.isLoggedIn()) return;
+        
+        const uid = Auth.user.uid;
+        let pendingCount = 0;
+        let hasNewChallenge = false;
+        
+        // Load seen challenges from localStorage
+        const stored = localStorage.getItem('seenChallenges');
+        if (stored) {
+            this.seenChallenges = new Set(JSON.parse(stored));
+        }
+        
+        challenges.forEach(challenge => {
+            // Count pending challenges for current user (as opponent)
+            if (challenge.opponentId === uid && challenge.status === 'pending') {
+                pendingCount++;
+                
+                // Check if this is a new unseen challenge
+                if (!this.seenChallenges.has(challenge.id)) {
+                    hasNewChallenge = true;
+                    this.seenChallenges.add(challenge.id);
+                }
+            }
+            
+            // Count active challenges waiting for user's score
+            if (challenge.status === 'active') {
+                const isCreator = challenge.creatorId === uid;
+                const myScore = isCreator ? challenge.creatorScore : challenge.opponentScore;
+                if (myScore === null) {
+                    pendingCount++;
+                }
+            }
+        });
+        
+        // Play sound if new challenge
+        if (hasNewChallenge) {
+            this.playSound('challenge');
+            // Save seen challenges
+            localStorage.setItem('seenChallenges', JSON.stringify([...this.seenChallenges]));
+        }
+        
+        this.badgeCounts.challenges = pendingCount;
+        this.updateBadge('challenges', pendingCount);
+    },
+    
+    // Check for new chat messages
+    checkNewMessage(message) {
+        if (!Auth.isLoggedIn()) return;
+        
+        // Only play sound for messages from others
+        if (message.userId !== Auth.user.uid && message.id !== this.lastMessageId) {
+            this.playSound('message');
+            this.lastMessageId = message.id;
+        }
+    },
+    
+    // Update badge count in UI
+    updateBadge(type, count) {
+        const badge = document.getElementById(`${type}Badge`);
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        
+        // Update page title
+        this.updateTitle();
+    },
+    
+    // Update page title with badge count
+    updateTitle() {
+        const total = this.badgeCounts.challenges;
+        const baseTitle = 'VocabMaster';
+        
+        if (total > 0) {
+            document.title = `(${total}) ${baseTitle}`;
+        } else {
+            document.title = baseTitle;
+        }
     }
 };

@@ -264,5 +264,359 @@ const Auth = {
     // Get current user ID
     getUserId() {
         return this.user ? this.user.uid : null;
+    },
+    
+    // ========================================
+    // Email/Password Authentication
+    // ========================================
+    
+    // Sign up with email and password
+    async signUpWithEmail(email, password, displayName) {
+        const submitBtn = document.querySelector('#emailRegisterForm button[type="submit"]');
+        const originalText = submitBtn ? submitBtn.textContent : '';
+        
+        try {
+            // Show loading state
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '⏳ Đang đăng ký...';
+            }
+            this.clearAuthError();
+            
+            const { createUserWithEmailAndPassword, updateProfile } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+            const result = await createUserWithEmailAndPassword(this.auth, email, password);
+            
+            // Generate avatar URL from name using UI Avatars API
+            const name = displayName || email.split('@')[0];
+            const avatarUrl = this.generateAvatarUrl(name);
+            
+            // Update display name and photo URL
+            await updateProfile(result.user, { 
+                displayName: displayName || name,
+                photoURL: avatarUrl
+            });
+            
+            App.showToast(`Chào mừng, ${displayName || email}! 🎉`, 'success');
+            this.closeEmailModal();
+            return result.user;
+        } catch (error) {
+            console.error('Sign up error:', error);
+            this.showAuthError(error);
+            return null;
+        } finally {
+            // Reset button
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+    },
+    
+    // Generate avatar URL from name/email
+    generateAvatarUrl(seed) {
+        // Use DiceBear API - generates fun cartoon avatars
+        // Available styles: adventurer, avataaars, bottts, fun-emoji, lorelei, micah, notionists, personas, pixel-art
+        const styles = ['adventurer', 'avataaars', 'bottts', 'fun-emoji', 'lorelei', 'micah', 'notionists-neutral', 'pixel-art'];
+        const randomStyle = styles[Math.floor(Math.random() * styles.length)];
+        const encodedSeed = encodeURIComponent(seed);
+        return `https://api.dicebear.com/7.x/${randomStyle}/svg?seed=${encodedSeed}&size=128`;
+    },
+    
+    // Sign in with email and password
+    async signInWithEmail(email, password) {
+        const submitBtn = document.querySelector('#emailLoginForm button[type="submit"]');
+        const originalText = submitBtn ? submitBtn.textContent : '';
+        
+        try {
+            // Show loading state
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '⏳ Đang đăng nhập...';
+            }
+            this.clearAuthError();
+            
+            const { signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+            const result = await signInWithEmailAndPassword(this.auth, email, password);
+            App.showToast(`Xin chào, ${result.user.displayName || result.user.email}! 👋`, 'success');
+            this.closeEmailModal();
+            return result.user;
+        } catch (error) {
+            console.error('Sign in error:', error);
+            this.showAuthError(error);
+            return null;
+        } finally {
+            // Reset button
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+    },
+    
+    // Send password reset email
+    async sendPasswordReset(email) {
+        const submitBtn = document.querySelector('#forgotPasswordForm button[type="submit"]');
+        const originalText = submitBtn ? submitBtn.textContent : '';
+        
+        try {
+            // Show loading state
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = '⏳ Đang gửi...';
+            }
+            this.clearAuthError();
+            
+            const { sendPasswordResetEmail } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+            await sendPasswordResetEmail(this.auth, email);
+            
+            // Show success message in form
+            this.showAuthSuccess(`Đã gửi email đặt lại mật khẩu đến ${email}! Kiểm tra hộp thư (và cả thư rác) của bạn.`);
+            App.showToast('Đã gửi email đặt lại mật khẩu!', 'success');
+            
+            // Change button to go back
+            if (submitBtn) {
+                submitBtn.textContent = '✅ Đã gửi! Quay lại đăng nhập';
+                submitBtn.onclick = () => this.showEmailLoginForm();
+                submitBtn.type = 'button';
+            }
+        } catch (error) {
+            console.error('Password reset error:', error);
+            this.showAuthError(error);
+            // Reset button on error
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+    },
+    
+    // Show auth error messages in Vietnamese (inline + toast)
+    showAuthError(error) {
+        const errorMessages = {
+            'auth/email-already-in-use': 'Email này đã được đăng ký! Hãy thử đăng nhập hoặc dùng email khác.',
+            'auth/invalid-email': 'Email không hợp lệ! Vui lòng kiểm tra lại.',
+            'auth/operation-not-allowed': 'Đăng nhập email chưa được bật! Liên hệ admin.',
+            'auth/weak-password': 'Mật khẩu quá yếu! Cần ít nhất 6 ký tự.',
+            'auth/user-disabled': 'Tài khoản đã bị vô hiệu hóa! Liên hệ admin.',
+            'auth/user-not-found': 'Không tìm thấy tài khoản với email này! Hãy đăng ký mới.',
+            'auth/wrong-password': 'Sai mật khẩu! Vui lòng thử lại.',
+            'auth/invalid-credential': 'Email hoặc mật khẩu không đúng!',
+            'auth/too-many-requests': 'Quá nhiều lần thử! Vui lòng đợi vài phút.',
+            'auth/network-request-failed': 'Lỗi kết nối mạng! Kiểm tra internet của bạn.',
+        };
+        const message = errorMessages[error.code] || `Lỗi: ${error.message}`;
+        
+        // Show inline error in modal
+        this.showInlineMessage(message, 'error');
+        
+        // Also show toast
+        App.showToast(message, 'error');
+    },
+    
+    // Clear inline error message
+    clearAuthError() {
+        const errorDiv = document.getElementById('authInlineMessage');
+        if (errorDiv) errorDiv.remove();
+    },
+    
+    // Show success message inline
+    showAuthSuccess(message) {
+        this.showInlineMessage(message, 'success');
+    },
+    
+    // Show inline message (error or success)
+    showInlineMessage(message, type) {
+        this.clearAuthError();
+        
+        const content = document.getElementById('emailAuthContent');
+        if (!content) return;
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.id = 'authInlineMessage';
+        msgDiv.style.cssText = `
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            ${type === 'error' 
+                ? 'background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);'
+                : 'background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);'
+            }
+        `;
+        msgDiv.innerHTML = `
+            <span style="flex-shrink: 0;">${type === 'error' ? '⚠️' : '✅'}</span>
+            <span>${message}</span>
+        `;
+        
+        // Insert at the top of the content
+        content.insertBefore(msgDiv, content.firstChild);
+    },
+    
+    // Show email authentication modal
+    showEmailAuthModal() {
+        const existingModal = document.getElementById('emailAuthModal');
+        if (existingModal) existingModal.remove();
+        
+        const modal = document.createElement('div');
+        modal.id = 'emailAuthModal';
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-overlay"></div>
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2 id="emailModalTitle">📧 Đăng nhập</h2>
+                    <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
+                </div>
+                <div id="emailAuthContent" style="padding: 1.5rem;">
+                    <!-- Content will be inserted here -->
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Show login form by default
+        this.showEmailLoginForm();
+        
+        // Close handlers
+        modal.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', () => this.closeEmailModal());
+        });
+        modal.querySelector('.modal-overlay').addEventListener('click', () => this.closeEmailModal());
+    },
+    
+    // Close email modal
+    closeEmailModal() {
+        const modal = document.getElementById('emailAuthModal');
+        if (modal) modal.remove();
+    },
+    
+    // Show login form
+    showEmailLoginForm() {
+        const title = document.getElementById('emailModalTitle');
+        const content = document.getElementById('emailAuthContent');
+        if (!content) return;
+        
+        if (title) title.textContent = '📧 Đăng nhập';
+        content.innerHTML = `
+            <form id="emailLoginForm">
+                <div class="form-group" style="padding: 0; margin-bottom: 1rem;">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" required placeholder="email@example.com" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-tertiary); color: var(--text-primary);">
+                </div>
+                <div class="form-group" style="padding: 0; margin-bottom: 1rem;">
+                    <label>Mật khẩu</label>
+                    <input type="password" id="loginPassword" required placeholder="••••••••" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-tertiary); color: var(--text-primary);">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">Đăng nhập</button>
+            </form>
+            <div style="text-align: center; font-size: 0.875rem;">
+                <a href="#" id="showForgotPassword" style="color: var(--accent-primary);">Quên mật khẩu?</a>
+                <span style="margin: 0 0.5rem; color: var(--text-muted);">|</span>
+                <a href="#" id="showRegister" style="color: var(--accent-primary);">Đăng ký mới</a>
+            </div>
+        `;
+        
+        // Form submit
+        document.getElementById('emailLoginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            this.signInWithEmail(email, password);
+        });
+        
+        // Navigation links
+        document.getElementById('showForgotPassword').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showForgotPasswordForm();
+        });
+        document.getElementById('showRegister').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showRegisterForm();
+        });
+    },
+    
+    // Show register form
+    showRegisterForm() {
+        const title = document.getElementById('emailModalTitle');
+        const content = document.getElementById('emailAuthContent');
+        if (!content) return;
+        
+        if (title) title.textContent = '📝 Đăng ký tài khoản';
+        content.innerHTML = `
+            <form id="emailRegisterForm">
+                <div class="form-group" style="padding: 0; margin-bottom: 1rem;">
+                    <label>Tên hiển thị</label>
+                    <input type="text" id="registerName" required placeholder="Tên của bạn" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-tertiary); color: var(--text-primary);">
+                </div>
+                <div class="form-group" style="padding: 0; margin-bottom: 1rem;">
+                    <label>Email</label>
+                    <input type="email" id="registerEmail" required placeholder="email@example.com" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-tertiary); color: var(--text-primary);">
+                </div>
+                <div class="form-group" style="padding: 0; margin-bottom: 1rem;">
+                    <label>Mật khẩu (ít nhất 6 ký tự)</label>
+                    <input type="password" id="registerPassword" required minlength="6" placeholder="••••••••" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-tertiary); color: var(--text-primary);">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">Đăng ký</button>
+            </form>
+            <div style="text-align: center; font-size: 0.875rem;">
+                <a href="#" id="backToLogin" style="color: var(--accent-primary);">← Quay lại đăng nhập</a>
+            </div>
+        `;
+        
+        // Form submit
+        document.getElementById('emailRegisterForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('registerName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            this.signUpWithEmail(email, password, name);
+        });
+        
+        // Back link
+        document.getElementById('backToLogin').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showEmailLoginForm();
+        });
+    },
+    
+    // Show forgot password form
+    showForgotPasswordForm() {
+        const title = document.getElementById('emailModalTitle');
+        const content = document.getElementById('emailAuthContent');
+        if (!content) return;
+        
+        if (title) title.textContent = '🔑 Quên mật khẩu';
+        content.innerHTML = `
+            <p style="margin-bottom: 1rem; color: var(--text-secondary);">
+                Nhập email của bạn để nhận link đặt lại mật khẩu.
+            </p>
+            <form id="forgotPasswordForm">
+                <div class="form-group" style="padding: 0; margin-bottom: 1rem;">
+                    <label>Email</label>
+                    <input type="email" id="resetEmail" required placeholder="email@example.com" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-tertiary); color: var(--text-primary);">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">Gửi email đặt lại</button>
+            </form>
+            <div style="text-align: center; font-size: 0.875rem;">
+                <a href="#" id="backToLogin2" style="color: var(--accent-primary);">← Quay lại đăng nhập</a>
+            </div>
+        `;
+        
+        // Form submit
+        document.getElementById('forgotPasswordForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('resetEmail').value;
+            this.sendPasswordReset(email);
+        });
+        
+        // Back link
+        document.getElementById('backToLogin2').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showEmailLoginForm();
+        });
     }
 };

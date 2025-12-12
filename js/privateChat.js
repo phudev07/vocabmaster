@@ -74,6 +74,10 @@ const PrivateChat = {
             const snapshot = await getDocs(q);
             
             this.conversations = [];
+            let totalUnread = 0;
+            
+            // Get last read times from localStorage
+            const lastReadTimes = JSON.parse(localStorage.getItem('lastReadTimes') || '{}');
             
             for (const docSnap of snapshot.docs) {
                 const data = docSnap.data();
@@ -88,6 +92,16 @@ const PrivateChat = {
                     }
                 } catch (e) {}
                 
+                const lastMessageTime = data.lastMessageTime?.toDate() || new Date(0);
+                const lastReadTime = lastReadTimes[docSnap.id] ? new Date(lastReadTimes[docSnap.id]) : new Date(0);
+                
+                // Check if unread (last message is after last read AND not from current user)
+                const isUnread = lastMessageTime > lastReadTime && data.lastSenderId !== Auth.user.uid;
+                
+                if (isUnread) {
+                    totalUnread++;
+                }
+                
                 this.conversations.push({
                     id: docSnap.id,
                     ...data,
@@ -96,12 +110,16 @@ const PrivateChat = {
                         name: otherUser.displayName || 'Unknown',
                         avatar: otherUser.photoURL || ''
                     },
-                    lastMessageTime: data.lastMessageTime?.toDate() || new Date()
+                    lastMessageTime: lastMessageTime,
+                    isUnread: isUnread
                 });
             }
             
             // Sort by last message time
             this.conversations.sort((a, b) => b.lastMessageTime - a.lastMessageTime);
+            
+            // Update inbox badge
+            this.updateInboxBadge(totalUnread);
             
             return this.conversations;
         } catch (error) {
@@ -110,9 +128,42 @@ const PrivateChat = {
         }
     },
     
+    // Update inbox badge count
+    updateInboxBadge(count) {
+        const badge = document.getElementById('inboxBadge');
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    },
+    
+    // Mark conversation as read
+    markAsRead(conversationId) {
+        const lastReadTimes = JSON.parse(localStorage.getItem('lastReadTimes') || '{}');
+        lastReadTimes[conversationId] = new Date().toISOString();
+        localStorage.setItem('lastReadTimes', JSON.stringify(lastReadTimes));
+        
+        // Update badge immediately
+        const conv = this.conversations.find(c => c.id === conversationId);
+        if (conv) {
+            conv.isUnread = false;
+        }
+        
+        // Recount unread and update badge
+        const unreadCount = this.conversations.filter(c => c.isUnread).length;
+        this.updateInboxBadge(unreadCount);
+    },
+    
     // Open a conversation
     async openConversation(conversationId, targetUserId = null) {
         this.currentConversation = conversationId;
+        
+        // Mark conversation as read
+        this.markAsRead(conversationId);
         
         // Show chat view
         App.showView('privateChatView');
@@ -162,8 +213,12 @@ const PrivateChat = {
                 limit(100)
             );
             
+            let isFirstLoad = true;
+            
             this.unsubscribe = onSnapshot(q, (snapshot) => {
+                const previousCount = this.messages.length;
                 this.messages = [];
+                
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     this.messages.push({
@@ -173,6 +228,15 @@ const PrivateChat = {
                     });
                 });
                 
+                // Play sound for new messages (not on first load, not from self)
+                if (!isFirstLoad && this.messages.length > previousCount) {
+                    const lastMessage = this.messages[this.messages.length - 1];
+                    if (lastMessage && lastMessage.senderId !== Auth.user.uid && typeof Notifications !== 'undefined') {
+                        Notifications.playSound('message');
+                    }
+                }
+                
+                isFirstLoad = false;
                 this.renderMessages();
                 this.scrollToBottom();
             });
@@ -223,10 +287,11 @@ const PrivateChat = {
             });
             
             // Update conversation with last message
-            await updateDoc(doc(db, 'conversations', this.currentConversation), {
-                lastMessage: sanitizedText.substring(0, 50),
-                lastMessageTime: serverTimestamp()
-            });
+        await updateDoc(doc(db, 'conversations', this.currentConversation), {
+            lastMessage: sanitizedText.substring(0, 50),
+            lastMessageTime: serverTimestamp(),
+            lastSenderId: Auth.user.uid
+        });
             
             // Log activity for abuse detection
             Security.logActivity('private_message');
@@ -347,6 +412,64 @@ const PrivateChat = {
             backBtn.addEventListener('click', () => this.goBack());
         }
         
+        // Start real-time listener for inbox badge if logged in
+        if (Auth.isLoggedIn()) {
+            this.listenToConversations();
+        }
+        
         console.log('Private chat initialized');
+    },
+    
+    // Real-time listener for conversations (for badge updates)
+    unsubscribeConversations: null,
+    
+    listenToConversations() {
+        if (!Auth.isLoggedIn() || !FirebaseDB.initialized) return;
+        
+        // Stop existing listener
+        if (this.unsubscribeConversations) {
+            this.unsubscribeConversations();
+        }
+        
+        try {
+            const { collection, query, where, onSnapshot } = FirebaseDB.firestore;
+            
+            const q = query(
+                collection(db, 'conversations'),
+                where('participants', 'array-contains', Auth.user.uid)
+            );
+            
+            // Get last read times from localStorage
+            const lastReadTimes = JSON.parse(localStorage.getItem('lastReadTimes') || '{}');
+            
+            this.unsubscribeConversations = onSnapshot(q, (snapshot) => {
+                let totalUnread = 0;
+                
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const lastMessageTime = data.lastMessageTime?.toDate() || new Date(0);
+                    const lastReadTime = lastReadTimes[docSnap.id] ? new Date(lastReadTimes[docSnap.id]) : new Date(0);
+                    
+                    // Check if unread (last message is after last read AND not from current user)
+                    if (lastMessageTime > lastReadTime && data.lastSenderId !== Auth.user.uid) {
+                        totalUnread++;
+                    }
+                });
+                
+                // Update inbox badge
+                this.updateInboxBadge(totalUnread);
+            });
+            
+            console.log('Real-time conversations listener started');
+        } catch (error) {
+            console.error('Listen to conversations error:', error);
+        }
+    },
+    
+    stopConversationsListener() {
+        if (this.unsubscribeConversations) {
+            this.unsubscribeConversations();
+            this.unsubscribeConversations = null;
+        }
     }
 };

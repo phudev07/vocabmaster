@@ -229,17 +229,100 @@ const Challenges = {
                 return;
             }
             
-            // Start test mode with callback
-            Test.startChallenge(words, (score) => {
-                this.submitScore(challengeId, score);
-                this.currentChallenge = null;
-                this.fetchChallenges().then(() => this.render());
-            });
+            // Show word preview first, then start quiz
+            this.showChallengePreview(challengeId, words, challenge);
             
         } catch (error) {
             console.error('Start challenge error:', error);
             App.showToast('Lỗi bắt đầu thách đấu', 'error');
         }
+    },
+    
+    // Show word preview before starting challenge quiz
+    showChallengePreview(challengeId, words, challenge) {
+        // Escape HTML helper
+        const escapeHtml = (str) => {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        };
+        
+        // Determine opponent name
+        const isCreator = challenge.creatorId === Auth.user.uid;
+        const opponentName = isCreator ? challenge.opponentName : challenge.creatorName;
+        
+        // Create preview modal
+        const existingModal = document.getElementById('challengePreviewModal');
+        if (existingModal) existingModal.remove();
+        
+        const modal = document.createElement('div');
+        modal.id = 'challengePreviewModal';
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-overlay"></div>
+            <div class="modal-content challenge-preview-modal">
+                <div class="modal-header">
+                    <h2>⚔️ Thách đấu với ${escapeHtml(opponentName)}</h2>
+                    <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
+                </div>
+                <div class="challenge-preview-body">
+                    <div style="text-align: center; margin-bottom: 1rem;">
+                        <span style="background: var(--accent-warning); color: #000; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.875rem;">
+                            📚 Chủ đề: ${escapeHtml(challenge.topicName || 'Hỗn hợp')}
+                        </span>
+                    </div>
+                    <p style="text-align: center; color: var(--text-secondary); margin-bottom: 1rem;">
+                        Ôn tập ${words.length} từ dưới đây trước khi bắt đầu kiểm tra
+                    </p>
+                    <div class="challenge-word-list">
+                        ${words.map((word, index) => `
+                            <div class="challenge-word-row">
+                                <span class="challenge-word-number">${index + 1}</span>
+                                <button class="challenge-word-speak" onclick="Speech.speak('${escapeHtml(word.english)}')">🔊</button>
+                                <span class="challenge-word-text">${escapeHtml(word.english)}</span>
+                                <span class="challenge-word-text challenge-word-vn">${escapeHtml(word.vietnamese)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="challenge-preview-actions">
+                        <button class="btn btn-secondary modal-close">
+                            ← Quay lại
+                        </button>
+                        <button class="btn btn-primary" id="startChallengeQuizBtn">
+                            ⚔️ Bắt đầu kiểm tra (${words.length} từ)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Close handlers
+        modal.querySelectorAll('.modal-close').forEach(btn => {
+            btn.addEventListener('click', () => {
+                modal.remove();
+                this.currentChallenge = null;
+            });
+        });
+        modal.querySelector('.modal-overlay').addEventListener('click', () => {
+            modal.remove();
+            this.currentChallenge = null;
+        });
+        
+        // Start quiz button
+        document.getElementById('startChallengeQuizBtn').addEventListener('click', () => {
+            modal.remove();
+            
+            // Shuffle words and start test
+            const shuffledWords = [...words].sort(() => Math.random() - 0.5);
+            
+            Test.startChallenge(shuffledWords, (score) => {
+                this.submitScore(challengeId, score);
+                this.currentChallenge = null;
+                this.fetchChallenges().then(() => this.render());
+            });
+        });
     },
     
     // Cancel a pending challenge (creator only)
@@ -548,6 +631,11 @@ const Challenges = {
                         });
                     }
                 });
+                
+                // Check for new challenges and update badge/sound
+                if (typeof Notifications !== 'undefined') {
+                    Notifications.checkNewChallenges(this.challenges);
+                }
                 
                 // Re-render if on challenges view
                 const challengesView = document.getElementById('challengesView');

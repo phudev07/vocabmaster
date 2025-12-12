@@ -1172,6 +1172,15 @@ body {
     gap: 0.5rem;
 }
 
+.icon-picker {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
 .icon-option,
 .color-option {
     width: 40px;
@@ -1185,6 +1194,7 @@ body {
     font-size: 1.25rem;
     cursor: pointer;
     transition: var(--transition-fast);
+    flex-shrink: 0;
 }
 
 .icon-option:hover,
@@ -1196,6 +1206,26 @@ body {
 .color-option.selected {
     border-color: var(--accent-primary);
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Mobile responsive icon picker */
+@media (max-width: 600px) {
+    .icon-picker {
+        max-height: 150px;
+        gap: 0.35rem;
+        padding: 0.35rem;
+    }
+    
+    .icon-option {
+        width: 36px;
+        height: 36px;
+        font-size: 1.1rem;
+    }
+    
+    #topicModal .modal-content {
+        max-height: 90vh;
+        overflow-y: auto;
+    }
 }
 
 .radio-group {
@@ -4079,5 +4109,434 @@ body {
     
     .landing-page {
         padding-top: calc(64px + env(safe-area-inset-top, 0));
+    }
+}
+
+/* Hero and CTA Button Layouts */
+.hero-buttons,
+.cta-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.hero-buttons .btn,
+.cta-buttons .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 200px;
+}
+
+@media (max-width: 600px) {
+    .hero-buttons,
+    .cta-buttons {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .hero-buttons .btn,
+    .cta-buttons .btn {
+        width: 100%;
+        min-width: unset;
+    }
+}
+
+/* Challenge Preview Modal */
+.challenge-preview-modal {
+    max-width: 600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.challenge-preview-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.challenge-word-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.challenge-word-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+}
+
+.challenge-word-number {
+    min-width: 1.5rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.challenge-word-speak {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+}
+
+.challenge-word-text {
+    flex: 1;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.challenge-word-vn {
+    text-align: right;
+}
+
+.challenge-preview-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.challenge-preview-actions .btn:first-child {
+    flex: 1;
+}
+
+.challenge-preview-actions .btn:last-child {
+    flex: 2;
+}
+
+/* Mobile fullscreen challenge preview */
+@media (max-width: 600px) {
+    .challenge-preview-modal {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        transform: none !important;
+    }
+    
+    .challenge-preview-body {
+        padding: 1rem;
+    }
+    
+    .challenge-word-row {
+        padding: 0.5rem;
+        gap: 0.5rem;
+    }
+    
+    .challenge-word-text {
+        font-size: 0.9rem;
+    }
+    
+    .challenge-word-vn {
+        max-width: 45%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .challenge-preview-actions {
+        flex-direction: column;
+    }
+    
+    .challenge-preview-actions .btn:first-child,
+    .challenge-preview-actions .btn:last-child {
+        flex: 1;
+        width: 100%;
+    }
+}
+
+/* ========================================
+   NATIVE-LIKE MOBILE EXPERIENCE
+   ======================================== */
+
+/* Disable text selection on interactive elements for app-like feel */
+@media (max-width: 768px) {
+    .btn, .nav-item, .topic-item, .word-item, .tab-btn, 
+    .icon-option, .color-option, .message-item, .challenge-card {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Touch feedback - Active state animation */
+    .btn:active, .nav-item:active, .topic-item:active, 
+    .word-item:active, .tab-btn:active, .message-item:active,
+    .challenge-card:active, .card:active {
+        transform: scale(0.97);
+        opacity: 0.8;
+    }
+    
+    /* Smooth momentum scrolling */
+    .main-content, .sidebar, .modal-content, .chat-messages,
+    .private-chat-messages, .word-list, .topics-list, .challenges-list {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+        overscroll-behavior: contain;
+    }
+    
+    /* Prevent pull-to-refresh on PWA */
+    body {
+        overscroll-behavior-y: contain;
+    }
+    
+    /* Minimum tap target size (44x44 as per Apple guidelines) */
+    .btn, .nav-item, .btn-icon, .icon-option, .color-option,
+    .tab-btn, .topic-item {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Smaller btn-icon (theme toggle, etc.) */
+    .btn-icon {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
+    }
+    
+    /* Larger touch targets for form elements */
+    input, select, textarea {
+        min-height: 48px;
+        font-size: 16px !important; /* Prevent iOS zoom on focus */
+    }
+    
+    /* Header improvements */
+    .header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        background: rgba(var(--bg-secondary-rgb, 30, 41, 59), 0.9);
+    }
+    
+    /* Card press effect */
+    .stat-card, .challenge-card, .word-item {
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    
+    .stat-card:active, .challenge-card:active {
+        transform: scale(0.98);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Smoother modal animations */
+    .modal {
+        transition: opacity 0.25s ease;
+    }
+    
+    .modal-content {
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+        transform: translateY(20px);
+    }
+    
+    .modal.active .modal-content {
+        transform: translateY(0);
+    }
+    
+    /* Fixed bottom action buttons in modals */
+    .modal .form-actions {
+        position: sticky;
+        bottom: 0;
+        background: var(--bg-secondary);
+        padding: 1rem;
+        margin: 0 -1.5rem -1.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    
+    /* Swipe hint animation */
+    @keyframes swipeHint {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(-10px); }
+    }
+    
+    /* Loading skeleton animation */
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+    
+    .skeleton {
+        background: linear-gradient(90deg, 
+            var(--bg-tertiary) 25%, 
+            var(--bg-secondary) 50%, 
+            var(--bg-tertiary) 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+}
+
+/* iOS Safe Area Support */
+@supports (padding: max(0px)) {
+    .sidebar {
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+    
+    .header {
+        padding-top: max(0.5rem, env(safe-area-inset-top));
+    }
+    
+    .modal .form-actions {
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+    
+    .main-content {
+        padding-bottom: max(80px, calc(80px + env(safe-area-inset-bottom)));
+    }
+}
+
+/* Haptic-like visual feedback for important actions */
+@keyframes successPulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes errorShake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.success-pulse {
+    animation: successPulse 0.5s ease;
+}
+
+.error-shake {
+    animation: errorShake 0.5s ease;
+}
+
+/* Improved toast notifications for mobile */
+@media (max-width: 768px) {
+    .toast-container {
+        bottom: 100px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        max-width: 90vw;
+    }
+    
+    .toast {
+        border-radius: var(--radius-lg);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Mobile fixes for private chat and profile modal */
+@media (max-width: 768px) {
+    /* Private chat - ensure input is visible at bottom */
+    #inboxChatView {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+    
+    #inboxChatView .chat-messages,
+    .private-chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+    }
+    
+    #inboxChatView .chat-input-container,
+    .private-chat-form,
+    #privateForm {
+        position: sticky;
+        bottom: 0;
+        background: var(--bg-secondary);
+        padding: 0.75rem;
+        border-top: 1px solid var(--border-color);
+        z-index: 10;
+        flex-shrink: 0;
+    }
+    
+    #privateForm input[type="text"] {
+        min-height: 40px;
+    }
+    
+    /* Profile modal - fix button layout */
+    #profileModal .modal-content {
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    
+    #profileModal .profile-content {
+        padding-bottom: 80px;
+    }
+    
+    #profileModal .form-actions,
+    #profileModal .profile-actions {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--bg-secondary);
+        padding: 1rem;
+        display: flex;
+        gap: 0.75rem;
+        border-top: 1px solid var(--border-color);
+        z-index: 10;
+        margin: 0;
+    }
+    
+    #profileModal .btn {
+        flex: 1;
+        min-height: 44px;
+        height: auto;
+        padding: 0.75rem 1rem;
+    }
+    
+    /* Reset btn-icon min-height inside profile modal */
+    #profileModal .btn-icon {
+        min-height: unset;
+        height: 36px;
+    }
+    
+    /* Fix sticky form-actions not to affect profile modal */
+    #profileModal .modal .form-actions {
+        position: fixed;
+        margin: 0;
+    }
+    
+    /* Smaller theme toggle button */
+    .theme-toggle {
+        width: 32px !important;
+        height: 32px !important;
+        min-width: 32px !important;
+        min-height: 32px !important;
+        padding: 0.25rem !important;
+        font-size: 1rem !important;
+    }
+    
+    .theme-toggle .theme-icon-dark,
+    .theme-toggle .theme-icon-light {
+        font-size: 1rem;
     }
 }

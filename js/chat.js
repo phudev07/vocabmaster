@@ -74,8 +74,12 @@ const Chat = {
                 limit(100)
             );
             
+            let isFirstLoad = true;
+            
             this.unsubscribe = onSnapshot(q, (snapshot) => {
+                const previousCount = this.messages.length;
                 this.messages = [];
+                
                 snapshot.forEach(doc => {
                     const data = doc.data();
                     this.messages.push({
@@ -88,6 +92,18 @@ const Chat = {
                     });
                 });
                 
+                // Play sound for new messages (not on first load)
+                if (!isFirstLoad && this.messages.length > previousCount) {
+                    const lastMessage = this.messages[this.messages.length - 1];
+                    if (lastMessage && typeof Notifications !== 'undefined') {
+                        Notifications.checkNewMessage(lastMessage);
+                    }
+                }
+                
+                // Update chat badge for unread messages
+                this.updateChatBadge();
+                
+                isFirstLoad = false;
                 this.render();
                 this.scrollToBottom();
             });
@@ -95,6 +111,48 @@ const Chat = {
             console.log('Chat listening started');
         } catch (error) {
             console.error('Start listening error:', error);
+        }
+    },
+    
+    // Update chat badge for unread messages
+    updateChatBadge() {
+        if (!Auth.isLoggedIn()) return;
+        
+        const badge = document.getElementById('chatBadge');
+        if (!badge) return;
+        
+        // Get last seen message ID from localStorage
+        const lastSeenId = localStorage.getItem('lastSeenChatId');
+        
+        // Count messages after last seen (excluding own messages)
+        let unreadCount = 0;
+        let foundLastSeen = !lastSeenId; // If no lastSeen, count from start
+        
+        for (const msg of this.messages) {
+            if (msg.id === lastSeenId) {
+                foundLastSeen = true;
+                continue;
+            }
+            if (foundLastSeen && msg.userId !== Auth.user.uid) {
+                unreadCount++;
+            }
+        }
+        
+        // Update badge
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+    },
+    
+    // Mark chat as seen (call when opening chat view)
+    markChatAsSeen() {
+        if (this.messages.length > 0) {
+            const lastMessage = this.messages[this.messages.length - 1];
+            localStorage.setItem('lastSeenChatId', lastMessage.id);
+            this.updateChatBadge();
         }
     },
     
@@ -133,7 +191,7 @@ const Chat = {
             
             return `
                 <div class="chat-message ${isOwn ? 'own' : ''}" data-id="${msg.id}">
-                    ${!isOwn ? `<img class="chat-avatar clickable-avatar" src="${msg.userAvatar || ''}" alt="${msg.userName}" onclick="App.showUserProfile('${msg.userId}')" title="Xem thông tin">` : ''}
+                    ${!isOwn ? `<img class="chat-avatar clickable-avatar" src="${msg.userAvatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(msg.userName)}&size=64`}" alt="${msg.userName}" onclick="App.showUserProfile('${msg.userId}')" title="Xem thông tin">` : ''}
                     <div class="chat-bubble">
                         ${!isOwn ? `<div class="chat-sender clickable-name" onclick="App.showUserProfile('${msg.userId}')">${msg.userName}${adminLabel}${badgeHtml}</div>` : ''}
                         <div class="chat-text">${this.escapeHtml(msg.text)}</div>
