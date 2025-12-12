@@ -251,6 +251,55 @@ const App = {
                 });
             }
         });
+        
+        // Mobile swipe gesture for sidebar
+        this.setupSwipeGesture();
+    },
+    
+    // Setup swipe gesture for mobile sidebar
+    setupSwipeGesture() {
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        const sidebar = document.getElementById('sidebar');
+        const minSwipeDistance = 50; // Minimum swipe distance in pixels
+        const edgeThreshold = 50; // Edge of screen threshold for opening (increased for easier trigger)
+        
+        // Touch start
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        
+        // Touch end
+        document.addEventListener('touchend', (e) => {
+            if (window.innerWidth > 768) return; // Only on mobile
+            
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            // Only handle horizontal swipes (ignore vertical scrolling)
+            if (Math.abs(deltaX) < Math.abs(deltaY)) return;
+            if (Math.abs(deltaX) < minSwipeDistance) return;
+            
+            // Swipe right - open sidebar (only if started from left edge)
+            if (deltaX > 0 && touchStartX < edgeThreshold && !sidebar.classList.contains('open')) {
+                sidebar.classList.add('open');
+                console.log('Swipe: Open sidebar');
+                return;
+            }
+            
+            // Swipe left - close sidebar
+            if (deltaX < 0 && sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                console.log('Swipe: Close sidebar');
+            }
+        }, { passive: true });
+        
+        console.log('Swipe gesture initialized');
     },
 
     // Show view
