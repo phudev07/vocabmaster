@@ -53,7 +53,18 @@ const Vocabulary = {
             return;
         }
         
-        this.renderWordsList(container, words, true);
+        // Use study-word-row layout like review section
+        container.innerHTML = words.map((word, index) => {
+            const topic = Storage.getTopicById(word.topicId);
+            return `
+                <div class="study-word-row" data-word-id="${word.id}">
+                    <span class="study-word-number">${index + 1}</span>
+                    <button class="study-word-speak" onclick="Speech.speak('${this.escapeHtml(word.english)}')">🔊</button>
+                    <span class="study-word-english">${this.escapeHtml(word.english)}</span>
+                    <span class="study-word-vietnamese">${this.escapeHtml(word.vietnamese)}</span>
+                </div>
+            `;
+        }).join('');
     },
 
     // Render words list (shared)

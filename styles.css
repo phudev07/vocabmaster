@@ -1472,8 +1472,8 @@ body {
     
     .study-word-vietnamese {
         flex: 1;
-        font-size: 0.8125rem;
-        color: var(--text-muted);
+        font-size: 0.875rem;
+        color: var(--text-primary);
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -4610,42 +4610,8 @@ body {
     }
 }
 
-/* Mobile leaderboard/user panel - box layout */
+/* Mobile - Admin table card layout only */
 @media (max-width: 768px) {
-    /* Leaderboard items - vertical layout */
-    .leaderboard-item,
-    .online-user {
-        flex-direction: column !important;
-        align-items: center !important;
-        text-align: center;
-        padding: 1rem !important;
-        gap: 0.5rem !important;
-    }
-    
-    .leaderboard-item .leaderboard-avatar,
-    .online-user img {
-        width: 48px !important;
-        height: 48px !important;
-        margin: 0 auto !important;
-    }
-    
-    .leaderboard-item .leaderboard-info,
-    .leaderboard-item .leaderboard-name {
-        text-align: center;
-        width: 100%;
-    }
-    
-    .leaderboard-item .leaderboard-rank {
-        margin-bottom: 0.25rem;
-    }
-    
-    /* Current user highlight */
-    .leaderboard-item.current-user,
-    .online-user.current-user {
-        background: var(--gradient-primary) !important;
-        border-radius: var(--radius-md);
-    }
-    
     /* Admin table - card layout on mobile */
     .admin-table {
         display: block;
@@ -4699,5 +4665,17 @@ body {
         padding-top: 0.5rem;
         border-top: 1px solid var(--border-color);
         margin-top: 0.5rem;
+    }
+    
+    /* Word card - make Vietnamese text same color as English */
+    .word-vietnamese {
+        color: var(--text-primary) !important;
+        opacity: 1 !important;
+    }
+    
+    .word-english,
+    .word-vietnamese {
+        font-size: 1rem;
+        font-weight: 500;
     }
 }
