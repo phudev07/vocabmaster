@@ -34,27 +34,54 @@ const Speech = {
     },
 
     selectVoice(type) {
-        // Find English voices
+        // Find English voices with priority
         const englishVoices = this.voices.filter(v => 
             v.lang.startsWith('en')
         );
+        
+        // Priority list for better voices
+        const priorityVoices = [
+            // Google voices (usually good quality)
+            'Google US English',
+            'Google UK English Female',
+            'Google UK English Male',
+            // Microsoft voices
+            'Microsoft David',
+            'Microsoft Zira',
+            'Microsoft Mark',
+            // Apple voices
+            'Samantha',
+            'Daniel',
+            'Karen',
+            'Moira'
+        ];
 
         if (type === 'UK') {
             // Prefer British English
             this.selectedVoice = englishVoices.find(v => 
-                v.lang === 'en-GB' || v.name.includes('UK') || v.name.includes('British')
-            ) || englishVoices[0];
+                v.lang === 'en-GB' || v.name.includes('UK') || v.name.includes('British') || v.name.includes('Daniel')
+            );
         } else {
             // Prefer American English
             this.selectedVoice = englishVoices.find(v => 
                 v.lang === 'en-US' || v.name.includes('US') || v.name.includes('American')
-            ) || englishVoices[0];
+            );
+        }
+        
+        // If not found, try priority voices
+        if (!this.selectedVoice) {
+            for (const pv of priorityVoices) {
+                this.selectedVoice = englishVoices.find(v => v.name.includes(pv));
+                if (this.selectedVoice) break;
+            }
         }
 
         // Fallback to any English voice
         if (!this.selectedVoice && englishVoices.length > 0) {
             this.selectedVoice = englishVoices[0];
         }
+        
+        console.log('Selected voice:', this.selectedVoice?.name, this.selectedVoice?.lang);
     },
 
     // Speak text
@@ -66,8 +93,12 @@ const Speech = {
 
         const utterance = new SpeechSynthesisUtterance(text);
         
+        // Always set English language explicitly (important for Android!)
+        utterance.lang = 'en-US';
+        
         if (this.selectedVoice) {
             utterance.voice = this.selectedVoice;
+            utterance.lang = this.selectedVoice.lang;
         }
         
         utterance.rate = this.rate;
