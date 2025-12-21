@@ -1,95 +1,133 @@
 /**
- * Notifications Module - Push Notifications with FCM
+ * Notifications Module - Push Notifications with OneSignal
  */
 
 const Notifications = {
     initialized: false,
-    messaging: null,
+    oneSignalReady: false,
     
-    // Initialize FCM
+    // OneSignal App ID
+    ONESIGNAL_APP_ID: '098cbdcc-90ec-4af9-84a1-89e53dde4723',
+    
+    // Initialize OneSignal
     async init() {
         if (!('Notification' in window)) {
             console.log('Notifications not supported');
             return false;
         }
         
+        if (this.initialized) return true;
+        
         try {
-            // Import Firebase messaging
-            const { getMessaging, getToken, onMessage } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js');
+            // Wait for OneSignal SDK to load
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
             
-            // Get messaging instance (using the app from FirebaseDB)
-            const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-            
-            const firebaseConfig = {
-                apiKey: "AIzaSyDBZz76elwCKWLtGRRiPntj4CFbmty9tmk",
-                authDomain: "vocabmaster-4c784.firebaseapp.com",
-                projectId: "vocabmaster-4c784",
-                storageBucket: "vocabmaster-4c784.firebasestorage.app",
-                messagingSenderId: "816895415090",
-                appId: "1:816895415090:web:5fcf52a0ea39f49e6d3d2b",
-                measurementId: "G-P5S6Z8YENY"
-            };
-            
-            const app = initializeApp(firebaseConfig, 'messaging');
-            this.messaging = getMessaging(app);
-            
-            // Handle foreground messages
-            onMessage(this.messaging, (payload) => {
-                console.log('Foreground message received:', payload);
-                this.showLocalNotification(payload.notification.title, payload.notification.body);
+            await new Promise((resolve) => {
+                window.OneSignalDeferred.push(async (OneSignal) => {
+                    await OneSignal.init({
+                        appId: this.ONESIGNAL_APP_ID,
+                        notifyButton: {
+                            enable: false // We use our own UI
+                        },
+                        allowLocalhostAsSecureOrigin: true
+                    });
+                    
+                    this.oneSignalReady = true;
+                    console.log('OneSignal initialized');
+                    resolve();
+                });
             });
             
             this.initialized = true;
-            console.log('Notifications initialized');
             return true;
         } catch (error) {
-            console.error('Notifications init error:', error);
+            console.error('OneSignal init error:', error);
             return false;
         }
     },
     
-    // Request permission and get token
+    // Request permission and register with OneSignal
     async requestPermission() {
         if (!this.initialized) {
             await this.init();
         }
         
         try {
-            const permission = await Notification.requestPermission();
-            
-            if (permission === 'granted') {
-                console.log('Notification permission granted');
-                App.showToast('Đã bật thông báo! 🔔', 'success');
+            // Use OneSignal's permission flow
+            if (window.OneSignal) {
+                await window.OneSignal.Slidedown.promptPush();
                 
-                // Mark as prompted
-                localStorage.setItem('vocabmaster_notif_prompted', 'true');
+                // Check if subscribed
+                const isSubscribed = await window.OneSignal.User.PushSubscription.optedIn;
                 
-                // Get FCM token
-                const { getToken } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js');
-                const token = await getToken(this.messaging, {
-                    vapidKey: 'YOUR_VAPID_KEY_HERE' // Need to generate this in Firebase Console
-                });
-                
-                if (token) {
-                    console.log('FCM Token:', token);
-                    // Save token to Firestore for server-side notifications
-                    await this.saveToken(token);
+                if (isSubscribed) {
+                    console.log('OneSignal push subscription active');
+                    App.showToast('Đã bật thông báo! 🔔', 'success');
+                    localStorage.setItem('vocabmaster_notif_prompted', 'true');
+                    
+                    // Tag user with Firebase UID for targeted notifications
+                    if (Auth.isLoggedIn()) {
+                        await this.tagUser();
+                    }
+                    
+                    // Set reminder time tag
+                    await this.updateReminderTag();
+                    
+                    return true;
+                } else {
+                    console.log('User did not subscribe');
+                    localStorage.setItem('vocabmaster_notif_prompted', 'later');
+                    return false;
                 }
-                
-                // Start daily reminders
-                this.scheduleDailyReminder();
-                
-                return true;
             } else {
-                console.log('Notification permission denied');
-                localStorage.setItem('vocabmaster_notif_prompted', 'true');
-                App.showToast('Bạn đã từ chối thông báo', 'warning');
+                // Fallback to native permission
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    App.showToast('Đã bật thông báo! 🔔', 'success');
+                    localStorage.setItem('vocabmaster_notif_prompted', 'true');
+                    return true;
+                }
                 return false;
             }
         } catch (error) {
             console.error('Error requesting permission:', error);
             App.showToast('Không thể bật thông báo', 'error');
             return false;
+        }
+    },
+    
+    // Tag user with Firebase UID for targeting
+    async tagUser() {
+        if (!window.OneSignal || !Auth.isLoggedIn()) return;
+        
+        try {
+            await window.OneSignal.User.addTags({
+                firebase_uid: Auth.user.uid,
+                user_name: Auth.user.displayName || 'User',
+                user_email: Auth.user.email || ''
+            });
+            console.log('User tagged with Firebase UID');
+        } catch (error) {
+            console.error('Error tagging user:', error);
+        }
+    },
+    
+    // Update reminder time tag for scheduled notifications
+    async updateReminderTag() {
+        if (!window.OneSignal) return;
+        
+        try {
+            const settings = Storage.getSettings();
+            const reminderEnabled = settings.reminderEnabled !== false;
+            const reminderTime = settings.reminderTime || '20:00';
+            
+            await window.OneSignal.User.addTags({
+                reminder_enabled: reminderEnabled ? 'true' : 'false',
+                reminder_time: reminderTime
+            });
+            console.log('Reminder tags updated:', { reminderEnabled, reminderTime });
+        } catch (error) {
+            console.error('Error updating reminder tags:', error);
         }
     },
     
@@ -243,13 +281,16 @@ const Notifications = {
         settings.reminderTime = time;
         Storage.saveSettings(settings);
         
-        // Reschedule reminder
+        // Reschedule local reminder (fallback)
         if (enabled && this.isEnabled()) {
             this.scheduleDailyReminder();
         } else if (this.reminderTimer) {
             clearTimeout(this.reminderTimer);
             this.reminderTimer = null;
         }
+        
+        // Update OneSignal tags for server-side scheduling
+        this.updateReminderTag();
         
         console.log('Reminder settings saved:', { enabled, time });
     },
