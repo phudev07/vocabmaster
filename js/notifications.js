@@ -139,95 +139,81 @@ const Notifications = {
         }
     },
     
-    // Show permission prompt modal
-    async showPermissionPrompt() {
-        // Check if already subscribed (set by subscription listener)
-        if (localStorage.getItem('vocabmaster_notif_subscribed') === 'true') {
-            console.log('Already subscribed, skipping prompt');
-            // Tag user if logged in
+    // Request native notification permission directly (no custom modal)
+    async promptNativePermission() {
+        // Skip if already granted or denied
+        if (!('Notification' in window)) {
+            console.log('Notifications not supported');
+            return false;
+        }
+        
+        if (Notification.permission === 'granted') {
+            console.log('Already have notification permission');
+            localStorage.setItem('vocabmaster_notif_subscribed', 'true');
             if (Auth.isLoggedIn()) {
                 this.tagUser();
             }
-            return;
+            return true;
         }
         
-        // Don't show if already prompted and dismissed
-        const prompted = localStorage.getItem('vocabmaster_notif_prompted');
-        if (prompted === 'denied' || prompted === 'dismissed') return;
+        if (Notification.permission === 'denied') {
+            console.log('Notifications denied by user');
+            localStorage.setItem('vocabmaster_notif_prompted', 'denied');
+            return false;
+        }
         
-        // Check native permission state
-        if ('Notification' in window) {
-            if (Notification.permission === 'denied') {
-                localStorage.setItem('vocabmaster_notif_prompted', 'denied');
-                return;
-            }
-            if (Notification.permission === 'granted') {
+        // Request permission - this shows the NATIVE device prompt
+        try {
+            const permission = await Notification.requestPermission();
+            console.log('Permission result:', permission);
+            
+            if (permission === 'granted') {
+                App.showToast('Đã bật thông báo! 🔔', 'success');
                 localStorage.setItem('vocabmaster_notif_subscribed', 'true');
-                if (Auth.isLoggedIn()) {
-                    this.tagUser();
+                localStorage.setItem('vocabmaster_notif_prompted', 'true');
+                
+                // Register with OneSignal if available
+                if (window.OneSignal) {
+                    try {
+                        await window.OneSignal.User.PushSubscription.optIn();
+                        if (Auth.isLoggedIn()) {
+                            await this.tagUser();
+                        }
+                    } catch (e) {
+                        console.log('OneSignal optIn error:', e);
+                    }
                 }
-                return;
+                
+                return true;
+            } else {
+                localStorage.setItem('vocabmaster_notif_prompted', 'denied');
+                return false;
             }
+        } catch (error) {
+            console.error('Permission request error:', error);
+            localStorage.setItem('vocabmaster_notif_prompted', 'error');
+            return false;
         }
-        
-        // Create modal
-        const modal = document.createElement('div');
-        modal.id = 'notificationPermissionModal';
-        modal.className = 'modal active';
-        modal.innerHTML = `
-            <div class="modal-overlay"></div>
-            <div class="modal-content" style="max-width: 400px; text-align: center;">
-                <div class="modal-header" style="border: none; padding-bottom: 0;">
-                    <h2 style="width: 100%; text-align: center;">🔔 Bật thông báo</h2>
-                </div>
-                <div class="modal-body" style="padding: 1.5rem;">
-                    <div class="notification-prompt-icon" style="font-size: 4rem; margin-bottom: 1rem;">
-                        📱
-                    </div>
-                    <p style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
-                        Cho phép VocabMaster gửi thông báo để:
-                    </p>
-                    <ul style="text-align: left; padding-left: 1.5rem; margin-bottom: 1.5rem; color: var(--text-secondary);">
-                        <li style="margin-bottom: 0.5rem;">💬 Nhận tin nhắn mới</li>
-                        <li style="margin-bottom: 0.5rem;">⚔️ Được mời đấu từ vựng</li>
-                        <li style="margin-bottom: 0.5rem;">📚 Nhắc lịch ôn tập hàng ngày</li>
-                        <li>🔥 Giữ streak không bị mất</li>
-                    </ul>
-                    <div style="display: flex; gap: 0.75rem; justify-content: center;">
-                        <button class="btn btn-secondary" id="notifLaterBtn">Để sau</button>
-                        <button class="btn btn-primary" id="notifAllowBtn">
-                            <span style="margin-right: 0.5rem;">🔔</span> Cho phép
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        // Bind events
-        modal.querySelector('.modal-overlay').addEventListener('click', () => {
-            modal.remove();
-            localStorage.setItem('vocabmaster_notif_prompted', 'later');
-        });
-        
-        modal.querySelector('#notifLaterBtn').addEventListener('click', () => {
-            modal.remove();
-            localStorage.setItem('vocabmaster_notif_prompted', 'later');
-        });
-        
-        modal.querySelector('#notifAllowBtn').addEventListener('click', async () => {
-            modal.remove();
-            await this.requestPermission();
-        });
     },
     
     // Check and prompt on login (call this after user logs in)
     checkAndPrompt() {
-        // Delay to not interrupt login flow
+        // Skip if already subscribed or prompted
+        if (localStorage.getItem('vocabmaster_notif_subscribed') === 'true') {
+            console.log('Already subscribed, skipping prompt');
+            return;
+        }
+        
+        const prompted = localStorage.getItem('vocabmaster_notif_prompted');
+        if (prompted === 'true' || prompted === 'denied') {
+            console.log('Already prompted, skipping');
+            return;
+        }
+        
+        // Delay then request native permission
         setTimeout(() => {
-            this.showPermissionPrompt();
-        }, 2000);
+            this.promptNativePermission();
+        }, 3000);
     },
     
     // Save FCM token to Firestore
