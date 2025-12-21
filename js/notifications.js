@@ -9,39 +9,37 @@ const Notifications = {
     // OneSignal App ID
     ONESIGNAL_APP_ID: '098cbdcc-90ec-4af9-84a1-89e53dde4723',
     
-    // Initialize OneSignal
+    // Initialize OneSignal (call once on app start)
     async init() {
-        if (!('Notification' in window)) {
-            console.log('Notifications not supported');
+        if (this.initialized) return true;
+        
+        // Check if OneSignal is available
+        if (typeof window.OneSignal === 'undefined') {
+            console.log('OneSignal SDK not loaded yet');
             return false;
         }
         
-        if (this.initialized) return true;
-        
         try {
-            // Wait for OneSignal SDK to load
-            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            // OneSignal is already initialized by SDK, just set up listeners
+            this.oneSignalReady = true;
+            this.initialized = true;
             
-            await new Promise((resolve) => {
-                window.OneSignalDeferred.push(async (OneSignal) => {
-                    await OneSignal.init({
-                        appId: this.ONESIGNAL_APP_ID,
-                        notifyButton: {
-                            enable: false // We use our own UI
-                        },
-                        allowLocalhostAsSecureOrigin: true
-                    });
-                    
-                    this.oneSignalReady = true;
-                    console.log('OneSignal initialized');
-                    resolve();
-                });
+            // Listen for subscription changes
+            window.OneSignal.User.PushSubscription.addEventListener('change', (event) => {
+                console.log('Push subscription changed:', event.current);
+                if (event.current.optedIn) {
+                    localStorage.setItem('vocabmaster_notif_subscribed', 'true');
+                    // Tag user when subscribed
+                    if (Auth.isLoggedIn()) {
+                        this.tagUser();
+                    }
+                }
             });
             
-            this.initialized = true;
+            console.log('Notifications module initialized');
             return true;
         } catch (error) {
-            console.error('OneSignal init error:', error);
+            console.error('Notifications init error:', error);
             return false;
         }
     },
@@ -57,12 +55,18 @@ const Notifications = {
             if (window.OneSignal) {
                 await window.OneSignal.Slidedown.promptPush();
                 
+                // Wait a moment for subscription to process
+                await new Promise(r => setTimeout(r, 1000));
+                
                 // Check if subscribed
                 const isSubscribed = await window.OneSignal.User.PushSubscription.optedIn;
                 
                 if (isSubscribed) {
                     console.log('OneSignal push subscription active');
                     App.showToast('Đã bật thông báo! 🔔', 'success');
+                    
+                    // Set BOTH flags
+                    localStorage.setItem('vocabmaster_notif_subscribed', 'true');
                     localStorage.setItem('vocabmaster_notif_prompted', 'true');
                     
                     // Tag user with Firebase UID for targeted notifications
@@ -76,7 +80,7 @@ const Notifications = {
                     return true;
                 } else {
                     console.log('User did not subscribe');
-                    localStorage.setItem('vocabmaster_notif_prompted', 'later');
+                    localStorage.setItem('vocabmaster_notif_prompted', 'dismissed');
                     return false;
                 }
             } else {
@@ -84,14 +88,18 @@ const Notifications = {
                 const permission = await Notification.requestPermission();
                 if (permission === 'granted') {
                     App.showToast('Đã bật thông báo! 🔔', 'success');
+                    localStorage.setItem('vocabmaster_notif_subscribed', 'true');
                     localStorage.setItem('vocabmaster_notif_prompted', 'true');
                     return true;
+                } else if (permission === 'denied') {
+                    localStorage.setItem('vocabmaster_notif_prompted', 'denied');
                 }
                 return false;
             }
         } catch (error) {
             console.error('Error requesting permission:', error);
-            App.showToast('Không thể bật thông báo', 'error');
+            // Still mark as prompted to avoid loop
+            localStorage.setItem('vocabmaster_notif_prompted', 'error');
             return false;
         }
     },
@@ -133,46 +141,33 @@ const Notifications = {
     
     // Show permission prompt modal
     async showPermissionPrompt() {
-        // Check if already subscribed via OneSignal
-        if (window.OneSignal) {
-            try {
-                const isPushSupported = await window.OneSignal.Notifications.isPushSupported();
-                if (!isPushSupported) {
-                    console.log('Push notifications not supported on this browser/device');
-                    return;
-                }
-                
-                const permission = await window.OneSignal.Notifications.permission;
-                if (permission === true) {
-                    console.log('Already subscribed to OneSignal');
-                    // Tag user if logged in
-                    if (Auth.isLoggedIn()) {
-                        this.tagUser();
-                    }
-                    return;
-                }
-            } catch (e) {
-                console.log('OneSignal check error:', e);
-            }
-        }
-        
-        // Don't show if already prompted
-        const prompted = localStorage.getItem('vocabmaster_notif_prompted');
-        if (prompted === 'true' || prompted === 'denied') return;
-        
-        // Native check
-        if (!('Notification' in window)) return;
-        if (Notification.permission === 'denied') {
-            localStorage.setItem('vocabmaster_notif_prompted', 'denied');
-            return;
-        }
-        if (Notification.permission === 'granted') {
-            // Already granted, just tag user
-            if (Auth.isLoggedIn() && window.OneSignal) {
+        // Check if already subscribed (set by subscription listener)
+        if (localStorage.getItem('vocabmaster_notif_subscribed') === 'true') {
+            console.log('Already subscribed, skipping prompt');
+            // Tag user if logged in
+            if (Auth.isLoggedIn()) {
                 this.tagUser();
             }
-            localStorage.setItem('vocabmaster_notif_prompted', 'true');
             return;
+        }
+        
+        // Don't show if already prompted and dismissed
+        const prompted = localStorage.getItem('vocabmaster_notif_prompted');
+        if (prompted === 'denied' || prompted === 'dismissed') return;
+        
+        // Check native permission state
+        if ('Notification' in window) {
+            if (Notification.permission === 'denied') {
+                localStorage.setItem('vocabmaster_notif_prompted', 'denied');
+                return;
+            }
+            if (Notification.permission === 'granted') {
+                localStorage.setItem('vocabmaster_notif_subscribed', 'true');
+                if (Auth.isLoggedIn()) {
+                    this.tagUser();
+                }
+                return;
+            }
         }
         
         // Create modal
