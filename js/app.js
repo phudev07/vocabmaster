@@ -550,6 +550,43 @@ const App = {
                 };
             }
         }
+        
+        // Enable notification button (for iOS that requires user gesture)
+        const enableNotifBtn = document.getElementById('enableNotifBtn');
+        if (enableNotifBtn) {
+            // Update button state based on current permission
+            const updateNotifBtn = () => {
+                if (Notification.permission === 'granted') {
+                    enableNotifBtn.textContent = '✅ Đã bật thông báo';
+                    enableNotifBtn.disabled = true;
+                    enableNotifBtn.classList.remove('btn-primary');
+                    enableNotifBtn.classList.add('btn-secondary');
+                } else if (Notification.permission === 'denied') {
+                    enableNotifBtn.textContent = '❌ Thông báo bị chặn';
+                    enableNotifBtn.disabled = true;
+                    enableNotifBtn.classList.remove('btn-primary');
+                    enableNotifBtn.classList.add('btn-secondary');
+                }
+            };
+            updateNotifBtn();
+            
+            enableNotifBtn.onclick = async () => {
+                if (typeof Notifications !== 'undefined') {
+                    const result = await Notifications.promptNativePermission();
+                    updateNotifBtn();
+                    if (result) {
+                        // Also try OneSignal opt-in
+                        if (window.OneSignal) {
+                            try {
+                                await window.OneSignal.User.PushSubscription.optIn();
+                            } catch (e) {
+                                console.log('OneSignal optIn:', e);
+                            }
+                        }
+                    }
+                }
+            };
+        }
     },
     
     // Open badge selector modal
