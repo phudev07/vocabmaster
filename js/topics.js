@@ -76,10 +76,52 @@ const Topics = {
 
         // Add click handlers
         container.querySelectorAll('.topic-item').forEach(item => {
+            let pressTimer = null;
+            let isLongPress = false;
+            
+            // Click handler (for desktop and non-long-press on mobile)
             item.addEventListener('click', () => {
-                const topicId = item.dataset.topicId;
-                this.selectTopic(topicId);
+                if (!isLongPress) {
+                    const topicId = item.dataset.topicId;
+                    this.selectTopic(topicId);
+                }
+                isLongPress = false;
             });
+            
+            // Long press for mobile - show actions
+            item.addEventListener('touchstart', (e) => {
+                isLongPress = false;
+                pressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    // Remove show-actions from all other items
+                    container.querySelectorAll('.topic-item').forEach(i => {
+                        i.classList.remove('show-actions');
+                    });
+                    // Add show-actions to this item
+                    item.classList.add('show-actions');
+                    // Vibrate if supported
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                }, 500);
+            }, { passive: true });
+            
+            item.addEventListener('touchend', () => {
+                clearTimeout(pressTimer);
+            });
+            
+            item.addEventListener('touchmove', () => {
+                clearTimeout(pressTimer);
+            });
+        });
+        
+        // Click outside to remove show-actions
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.topic-item')) {
+                container.querySelectorAll('.topic-item').forEach(item => {
+                    item.classList.remove('show-actions');
+                });
+            }
         });
     },
 

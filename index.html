@@ -115,23 +115,23 @@
             </div>
         </section>
 
-        <!-- Mission & Vision -->
+        <!-- Motivational Quotes -->
         <section class="landing-section">
             <div class="mission-cards">
                 <div class="mission-card">
-                    <div class="mission-icon">🎯</div>
-                    <h3>Sứ mệnh</h3>
-                    <p>Giúp người Việt học từ vựng tiếng Anh hiệu quả với phương pháp khoa học, không nhàm chán.</p>
+                    <div class="mission-icon">💪</div>
+                    <h3>Kiên trì mỗi ngày</h3>
+                    <p>"Mỗi ngày một từ mới, một năm sau bạn sẽ biết thêm 365 từ. Hành trình ngàn dặm bắt đầu từ một bước chân."</p>
                 </div>
                 <div class="mission-card">
-                    <div class="mission-icon">🚀</div>
-                    <h3>Tầm nhìn</h3>
-                    <p>Trở thành ứng dụng học từ vựng #1 Việt Nam với cộng đồng học tập cùng tiến.</p>
+                    <div class="mission-icon">🧠</div>
+                    <h3>Nhớ lâu hơn</h3>
+                    <p>"Ôn tập đúng lúc, nhớ mãi không quên. Spaced Repetition giúp bạn học ít mà nhớ nhiều."</p>
                 </div>
                 <div class="mission-card">
-                    <div class="mission-icon">💡</div>
-                    <h3>Phương pháp</h3>
-                    <p>Spaced Repetition System (SRS) - ôn tập đúng lúc, nhớ lâu hơn, tiết kiệm thời gian.</p>
+                    <div class="mission-icon">🔥</div>
+                    <h3>Cùng nhau tiến bộ</h3>
+                    <p>"Học một mình đi nhanh, học cùng nhau đi xa. Thách đấu bạn bè, cùng nhau chinh phục tiếng Anh!"</p>
                 </div>
             </div>
         </section>
@@ -370,7 +370,8 @@
                     
                     <div class="dashboard-section dashboard-section-half">
                         <div class="section-header">
-                            <h2>🏆 Top Users</h2>
+                            <h2>🏆 Bảng xếp hạng</h2>
+                            <button class="btn btn-secondary btn-sm" id="viewAllLeaderboardBtn">Xem tất cả</button>
                         </div>
                         <div class="leaderboard-preview" id="dashboardLeaderboard">
                             <!-- Top 5 users will be rendered here -->
@@ -710,6 +711,12 @@
                         <button type="button" class="color-option" data-color="#98D8C8" style="background:#98D8C8"></button>
                         <button type="button" class="color-option" data-color="#F7DC6F" style="background:#F7DC6F"></button>
                     </div>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" id="topicPublic" style="width: 18px; height: 18px;">
+                        <span>📢 Chia sẻ công khai (để người khác có thể tham khảo)</span>
+                    </label>
                 </div>
                 <input type="hidden" id="topicId">
                 <div class="form-actions">

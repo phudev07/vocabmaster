@@ -312,5 +312,66 @@ const Leaderboard = {
         
         // Start real-time sync
         this.startRealtimeUsers();
+        
+        // Bind view all button
+        const viewAllBtn = document.getElementById('viewAllLeaderboardBtn');
+        if (viewAllBtn) {
+            viewAllBtn.addEventListener('click', () => this.showFullLeaderboard());
+        }
+    },
+    
+    // Show full leaderboard modal
+    showFullLeaderboard() {
+        // Remove existing modal
+        const existing = document.getElementById('fullLeaderboardModal');
+        if (existing) existing.remove();
+        
+        // Find current user's rank
+        let currentUserRank = -1;
+        if (Auth.isLoggedIn()) {
+            currentUserRank = this.users.findIndex(u => u.id === Auth.user.uid);
+        }
+        
+        const modal = document.createElement('div');
+        modal.id = 'fullLeaderboardModal';
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-overlay"></div>
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h2>🏆 Bảng xếp hạng</h2>
+                    <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
+                </div>
+                <div style="padding: 1rem; max-height: 60vh; overflow-y: auto;">
+                    ${currentUserRank >= 0 ? `
+                        <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem; text-align: center;">
+                            <span style="font-size: 1.25rem;">🎯 Hạng của bạn: <strong>#${currentUserRank + 1}</strong> / ${this.users.length}</span>
+                        </div>
+                    ` : ''}
+                    <div class="full-leaderboard-list">
+                        ${this.users.map((user, index) => {
+                            const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+                            const isCurrentUser = Auth.isLoggedIn() && user.id === Auth.user.uid;
+                            return `
+                                <div class="leaderboard-item ${isCurrentUser ? 'current-user' : ''}" onclick="App.showUserProfile('${user.id}')" style="cursor: pointer;">
+                                    <span class="leaderboard-rank">${rankIcon}</span>
+                                    <img class="leaderboard-avatar" src="${user.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name)}&size=64`}" alt="${user.name}">
+                                    <div class="leaderboard-info">
+                                        <div class="leaderboard-name">${user.name}${Badges.getBadgeHtml(user, 'small')}${isCurrentUser ? ' (Bạn)' : ''}</div>
+                                        <div class="leaderboard-xp">${user.xp} XP • ${user.totalWords} từ • 🔥${user.streak}</div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Close handlers
+        modal.querySelector('.modal-overlay').addEventListener('click', () => modal.remove());
+        modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());
     }
 };

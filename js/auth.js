@@ -72,6 +72,8 @@ const Auth = {
                         FirebaseDB.setUserId(user.uid);
                         FirebaseDB.syncFromCloud().then(() => {
                             FirebaseDB.startRealtimeSync();
+                            // Check if streak should be reset (user missed days)
+                            Stats.checkStreakOnLoad();
                             Stats.render();
                             Topics.render();
                         });

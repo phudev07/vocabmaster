@@ -40,10 +40,82 @@ const Stats = {
         };
     },
 
+    // Check and update streak when app loads (auto-reset if missed days)
+    checkStreakOnLoad() {
+        const stats = Storage.getStats();
+        if (!stats.lastStudyDate || !stats.streak) return;
+        
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        const lastDate = new Date(stats.lastStudyDate);
+        const daysDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+        const currentMonth = today.getMonth();
+        
+        // Reset monthly freezes if new month
+        if (stats.freezeMonth !== currentMonth) {
+            stats.freezeMonth = currentMonth;
+            stats.freezesRemaining = 3;
+        }
+        
+        // Initialize freezes if not set
+        if (stats.freezesRemaining === undefined) {
+            stats.freezesRemaining = 3;
+            stats.freezeMonth = currentMonth;
+        }
+        
+        // Check if streak should be reset
+        if (daysDiff > 1) {
+            const daysMissed = daysDiff - 1; // Days without studying
+            
+            if (stats.freezesRemaining >= daysMissed) {
+                // Have enough freezes to cover all missed days
+                stats.freezesRemaining -= daysMissed;
+                stats.freezesUsed = (stats.freezesUsed || 0) + daysMissed;
+                App.showToast(`❄️ Đã dùng ${daysMissed} Streak Freeze! Còn ${stats.freezesRemaining} freeze`, 'warning');
+            } else if (stats.freezesRemaining > 0) {
+                // Have some freezes but not enough
+                const freezesUsed = stats.freezesRemaining;
+                const oldStreak = stats.streak;
+                stats.freezesUsed = (stats.freezesUsed || 0) + freezesUsed;
+                stats.freezesRemaining = 0;
+                stats.streak = 0;
+                stats.lastStudyDate = null;
+                App.showToast(`😢 Đã dùng hết ${freezesUsed} freeze nhưng không đủ! Streak ${oldStreak} ngày đã bị reset!`, 'error');
+            } else {
+                // No freezes left
+                const oldStreak = stats.streak;
+                stats.streak = 0;
+                stats.lastStudyDate = null;
+                App.showToast(`😢 Bạn đã nghỉ ${daysMissed} ngày và hết freeze. Streak ${oldStreak} ngày đã bị reset!`, 'error');
+            }
+            
+            Storage.saveStats(stats);
+            FirebaseDB.saveStats(stats);
+        }
+    },
+
+    // Get ISO week number
+    getWeekNumber(date) {
+        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    },
+
     // Update streak and weekly progress
     recordStudySession(wordsStudied = 1) {
         const stats = Storage.getStats();
         const today = new Date();
+        const currentWeek = this.getWeekNumber(today);
+        const currentYear = today.getFullYear();
+        
+        // Reset weekly progress if new week
+        if (stats.lastWeekNumber !== currentWeek || stats.lastWeekYear !== currentYear) {
+            stats.weeklyProgress = [0, 0, 0, 0, 0, 0, 0];
+            stats.lastWeekNumber = currentWeek;
+            stats.lastWeekYear = currentYear;
+        }
         const todayStr = today.toISOString().split('T')[0];
         const currentMonth = today.getMonth();
         
@@ -69,18 +141,31 @@ const Stats = {
             } else if (daysDiff === 1) {
                 // Consecutive day, increase streak
                 stats.streak = (stats.streak || 0) + 1;
-            } else if (daysDiff === 2 && stats.freezesRemaining > 0) {
-                // Missed 1 day but have freeze - use it!
-                stats.freezesRemaining--;
-                stats.streak = (stats.streak || 0) + 1;
-                stats.freezesUsed = (stats.freezesUsed || 0) + 1;
-                App.showToast(`❄️ Đã dùng 1 Streak Freeze! Còn ${stats.freezesRemaining} freeze`, 'warning');
-            } else {
-                // Streak broken (missed more than 1 day or no freeze left)
-                if (daysDiff > 1 && stats.streak > 0) {
-                    App.showToast(`😢 Streak ${stats.streak} ngày đã bị reset!`, 'error');
+            } else if (daysDiff > 1) {
+                const daysMissed = daysDiff - 1;
+                
+                if (stats.freezesRemaining >= daysMissed) {
+                    // Have enough freezes - use them and continue streak
+                    stats.freezesRemaining -= daysMissed;
+                    stats.freezesUsed = (stats.freezesUsed || 0) + daysMissed;
+                    stats.streak = (stats.streak || 0) + 1;
+                    App.showToast(`❄️ Đã dùng ${daysMissed} Streak Freeze! Còn ${stats.freezesRemaining} freeze`, 'warning');
+                } else if (stats.freezesRemaining > 0) {
+                    // Have some freezes but not enough - streak broken
+                    const freezesUsed = stats.freezesRemaining;
+                    stats.freezesUsed = (stats.freezesUsed || 0) + freezesUsed;
+                    stats.freezesRemaining = 0;
+                    if (stats.streak > 0) {
+                        App.showToast(`😢 Dùng hết ${freezesUsed} freeze nhưng không đủ! Streak ${stats.streak} ngày đã bị reset!`, 'error');
+                    }
+                    stats.streak = 1;
+                } else {
+                    // No freezes - streak broken
+                    if (stats.streak > 0) {
+                        App.showToast(`😢 Streak ${stats.streak} ngày đã bị reset!`, 'error');
+                    }
+                    stats.streak = 1;
                 }
-                stats.streak = 1;
             }
         } else {
             // First study session
@@ -168,6 +253,7 @@ const Stats = {
             const height = (value / maxValue) * 100;
             return `
                 <div class="chart-bar">
+                    <span class="chart-bar-value">${value > 0 ? value : ''}</span>
                     <div class="chart-bar-fill" style="height: ${Math.max(height, 4)}%"></div>
                     <span class="chart-bar-label">${days[index]}</span>
                 </div>

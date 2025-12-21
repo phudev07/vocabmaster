@@ -235,7 +235,6 @@ body {
 
 .theme-toggle:hover {
     background: var(--border-color);
-    transform: scale(1.05);
 }
 
 .theme-icon-dark,
@@ -403,19 +402,29 @@ body {
 .topic-item .topic-count {
     font-size: 0.75rem;
     color: var(--text-muted);
+    min-width: 50px;
+    text-align: right;
 }
 
 .topic-item .topic-actions {
-    display: none;
+    display: flex;
     gap: 0.25rem;
+    min-width: 50px;
+    justify-content: flex-end;
+    opacity: 0;
+    visibility: hidden;
+    position: absolute;
+    right: 0.5rem;
 }
 
 .topic-item:hover .topic-actions {
-    display: flex;
+    opacity: 1;
+    visibility: visible;
 }
 
 .topic-item:hover .topic-count {
-    display: none;
+    opacity: 0;
+    visibility: hidden;
 }
 
 /* ======================================== 
@@ -496,8 +505,8 @@ body {
 }
 
 .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px var(--shadow-color);
+    box-shadow: 0 8px 30px var(--shadow-color);
+    border-color: var(--accent-primary);
 }
 
 .stat-icon {
@@ -574,6 +583,8 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: flex-end;
+    height: 100%;
     gap: 0.5rem;
 }
 
@@ -589,6 +600,14 @@ body {
 .chart-bar-label {
     font-size: 0.75rem;
     color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.chart-bar-value {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+    min-height: 1rem;
 }
 
 /* ======================================== 
@@ -632,7 +651,6 @@ body {
 
 .word-speak:hover {
     background: var(--accent-primary);
-    transform: scale(1.1);
 }
 
 .word-content {
@@ -815,7 +833,6 @@ body {
 
 .speak-btn:hover {
     background: var(--accent-primary);
-    transform: scale(1.1);
 }
 
 .flashcard-hint {
@@ -1009,8 +1026,8 @@ body {
 }
 
 .btn-primary:hover {
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
-    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+    opacity: 0.9;
 }
 
 .btn-secondary {
@@ -1683,7 +1700,6 @@ body {
 
 .edit-name-btn:hover {
     opacity: 1;
-    transform: scale(1.1);
 }
 
 .profile-details h3 {
@@ -1851,7 +1867,7 @@ body {
 }
 
 .color-option:hover {
-    transform: scale(1.1);
+    border-color: var(--accent-primary);
 }
 
 .color-option.active {
@@ -1869,29 +1885,28 @@ body {
    Micro-Animations 
    ======================================== */
 
-/* Card hover lift effect */
+/* Card hover effect - border only, no lift */
 .stat-card,
 .word-card,
 .topic-item,
 .mission-card,
 .feature-item {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .stat-card:hover,
 .word-card:hover,
 .topic-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px var(--shadow-color);
+    border-color: var(--accent-primary);
 }
 
-/* Button press effect */
+/* Button press effect - opacity only, no scale */
 .btn {
     transition: all 0.15s ease;
 }
 
 .btn:active {
-    transform: scale(0.97);
+    opacity: 0.8;
 }
 
 /* Modal appear animation */
@@ -2291,7 +2306,6 @@ body {
 }
 
 .btn-install:hover {
-    transform: scale(1.05);
     box-shadow: 0 8px 30px rgba(16, 185, 129, 0.4);
 }
 
@@ -2625,7 +2639,6 @@ body {
 
 .chat-action-btn:hover {
     opacity: 1;
-    transform: scale(1.1);
 }
 
 .chat-form {
@@ -2658,8 +2671,8 @@ body {
 }
 
 .clickable-avatar:hover {
-    transform: scale(1.1);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    border: 2px solid var(--accent-primary);
 }
 
 .clickable-name {
@@ -4081,7 +4094,7 @@ body {
     }
     
     .btn:active {
-        transform: scale(0.98);
+        opacity: 0.8;
     }
 }
 
@@ -4275,12 +4288,11 @@ body {
         -webkit-tap-highlight-color: transparent;
     }
     
-    /* Touch feedback - Active state animation */
+    /* Touch feedback - Active state (no scale, just opacity) */
     .btn:active, .nav-item:active, .topic-item:active, 
     .word-item:active, .tab-btn:active, .message-item:active,
     .challenge-card:active, .card:active {
-        transform: scale(0.97);
-        opacity: 0.8;
+        opacity: 0.7;
     }
     
     /* Smooth momentum scrolling */
@@ -4333,7 +4345,7 @@ body {
     }
     
     .stat-card:active, .challenge-card:active {
-        transform: scale(0.98);
+        opacity: 0.8;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     
@@ -4546,18 +4558,28 @@ body {
     .word-card:hover,
     .vocab-item:hover {
         transform: none !important;
-        box-shadow: inherit !important;
-        border-color: inherit !important;
-        background: inherit !important;
+        box-shadow: none !important;
+        border-color: var(--border-color) !important;
+        background: var(--bg-secondary) !important;
     }
     
-    /* Only apply active state (actual touch) */
+    /* Only apply active state (actual touch) - not for word-card */
     .word-item:active,
     .topic-item:active,
-    .word-card:active,
     .vocab-item:active {
-        transform: scale(0.98) !important;
-        opacity: 0.9;
+        opacity: 0.8;
+    }
+    
+    /* Word card - completely no effect on mobile */
+    .word-card,
+    .word-card:hover,
+    .word-card:active,
+    .word-card:focus {
+        transform: none !important;
+        box-shadow: none !important;
+        border-color: var(--border-color) !important;
+        background: var(--bg-secondary) !important;
+        opacity: 1 !important;
     }
     
     /* Dashboard user panel - vertical box layout on mobile */
@@ -4607,6 +4629,24 @@ body {
         transform: none !important;
         box-shadow: inherit !important;
         border-color: inherit !important;
+    }
+    
+    /* Hide topic actions on touch - show via long-press in JS */
+    .topic-item:hover .topic-actions {
+        display: none !important;
+    }
+    
+    .topic-item:hover .topic-count {
+        display: block !important;
+    }
+    
+    /* Only show actions when .show-actions class is added (via long-press) */
+    .topic-item.show-actions .topic-actions {
+        display: flex !important;
+    }
+    
+    .topic-item.show-actions .topic-count {
+        display: none !important;
     }
 }
 
@@ -4667,15 +4707,69 @@ body {
         margin-top: 0.5rem;
     }
     
-    /* Word card - make Vietnamese text same color as English */
-    .word-vietnamese {
-        color: var(--text-primary) !important;
-        opacity: 1 !important;
+    /* Word card mobile layout - status on right edge */
+    .word-card {
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+        padding: 0.75rem;
+        align-items: center;
     }
     
-    .word-english,
+    .word-content {
+        flex: 1;
+        min-width: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.15rem;
+    }
+    
+    .word-english {
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+    
+    /* Vietnamese text muted (lighter than English) */
     .word-vietnamese {
-        font-size: 1rem;
-        font-weight: 500;
+        font-size: 0.85rem;
+        color: var(--text-secondary) !important;
+        opacity: 0.8 !important;
+    }
+    
+    /* Status badge on right edge */
+    .word-status {
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+    
+    .word-status-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+        white-space: nowrap;
+    }
+    
+    /* Hide actions on mobile, show on tap */
+    .word-actions {
+        display: none;
+    }
+}
+
+/* Fullscreen modal for leaderboard on mobile */
+@media (max-width: 768px) {
+    #fullLeaderboardModal {
+        padding: 0 !important;
+    }
+    
+    #fullLeaderboardModal .modal-content {
+        width: 100% !important;
+        height: 100% !important;
+        max-width: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+    }
+    
+    #fullLeaderboardModal .modal-content > div:last-child {
+        max-height: calc(100vh - 60px) !important;
+        height: calc(100vh - 60px) !important;
     }
 }
