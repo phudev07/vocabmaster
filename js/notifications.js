@@ -132,11 +132,48 @@ const Notifications = {
     },
     
     // Show permission prompt modal
-    showPermissionPrompt() {
-        // Don't show if already prompted or permission already granted/denied
-        if (localStorage.getItem('vocabmaster_notif_prompted')) return;
-        if (Notification.permission !== 'default') return;
+    async showPermissionPrompt() {
+        // Check if already subscribed via OneSignal
+        if (window.OneSignal) {
+            try {
+                const isPushSupported = await window.OneSignal.Notifications.isPushSupported();
+                if (!isPushSupported) {
+                    console.log('Push notifications not supported on this browser/device');
+                    return;
+                }
+                
+                const permission = await window.OneSignal.Notifications.permission;
+                if (permission === true) {
+                    console.log('Already subscribed to OneSignal');
+                    // Tag user if logged in
+                    if (Auth.isLoggedIn()) {
+                        this.tagUser();
+                    }
+                    return;
+                }
+            } catch (e) {
+                console.log('OneSignal check error:', e);
+            }
+        }
+        
+        // Don't show if already prompted
+        const prompted = localStorage.getItem('vocabmaster_notif_prompted');
+        if (prompted === 'true' || prompted === 'denied') return;
+        
+        // Native check
         if (!('Notification' in window)) return;
+        if (Notification.permission === 'denied') {
+            localStorage.setItem('vocabmaster_notif_prompted', 'denied');
+            return;
+        }
+        if (Notification.permission === 'granted') {
+            // Already granted, just tag user
+            if (Auth.isLoggedIn() && window.OneSignal) {
+                this.tagUser();
+            }
+            localStorage.setItem('vocabmaster_notif_prompted', 'true');
+            return;
+        }
         
         // Create modal
         const modal = document.createElement('div');
