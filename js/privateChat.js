@@ -325,26 +325,53 @@ const PrivateChat = {
     },
     
     // Render messages
-    renderMessages() {
-        const container = document.getElementById('privateMessages');
-        if (!container) return;
-        
-        if (this.messages.length === 0) {
-            container.innerHTML = '<p class="empty-state">Bắt đầu cuộc trò chuyện!</p>';
-            return;
+renderMessages() {
+    const container = document.getElementById('privateMessages');
+    if (!container) return;
+    
+    if (this.messages.length === 0) {
+        container.innerHTML = '<p class="empty-state">Bắt đầu cuộc trò chuyện!</p>';
+        return;
+    }
+    
+    const currentUid = Auth.user?.uid;
+    
+    container.innerHTML = this.messages.map(msg => {
+        // Check if this is a topic share message
+        let messageContent = this.escapeHtml(msg.text);
+        if (msg.text && msg.text.startsWith('[TOPIC_SHARE]')) {
+            try {
+                const topicData = JSON.parse(msg.text.replace('[TOPIC_SHARE]', ''));
+                messageContent = `
+                    <div class="topic-share-card">
+                        <div class="topic-share-header">
+                            <span class="topic-share-icon">${topicData.topicIcon}</span>
+                            <div>
+                                <strong>${this.escapeHtml(topicData.topicName)}</strong>
+                                <span class="topic-share-count">${topicData.wordsCount} từ</span>
+                            </div>
+                        </div>
+                        <div class="topic-share-actions">
+                            <button class="btn btn-secondary btn-sm" onclick="Explore.previewTopic('${topicData.topicId}')">👁️ Xem</button>
+                            <button class="btn btn-primary btn-sm" onclick="Explore.importTopic('${topicData.topicId}')">📥 Import</button>
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                // Not valid JSON, render as normal text
+            }
         }
         
-        const currentUid = Auth.user?.uid;
-        
-        container.innerHTML = this.messages.map(msg => `
-            <div class="private-message ${msg.senderId === currentUid ? 'own' : ''}">
-                <div class="private-bubble">
-                    <div class="private-text">${this.escapeHtml(msg.text)}</div>
-                    <div class="private-time">${this.formatMessageTime(msg.timestamp)}</div>
-                </div>
+        return `
+        <div class="private-message ${msg.senderId === currentUid ? 'own' : ''}">
+            <div class="private-bubble">
+                <div class="private-text">${messageContent}</div>
+                <div class="private-time">${this.formatMessageTime(msg.timestamp)}</div>
             </div>
-        `).join('');
-    },
+        </div>
+    `;
+    }).join('');
+},
     
     // Scroll to bottom
     scrollToBottom() {

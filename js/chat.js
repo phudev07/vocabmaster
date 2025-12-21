@@ -189,12 +189,37 @@ const Chat = {
             const isAdmin = leaderboardUser?.isAdmin || false;
             const adminLabel = isAdmin ? '<span class="admin-label">Admin</span>' : '';
             
+            // Check if this is a topic share message
+            let messageContent = this.escapeHtml(msg.text);
+            if (msg.text && msg.text.startsWith('[TOPIC_SHARE]')) {
+                try {
+                    const topicData = JSON.parse(msg.text.replace('[TOPIC_SHARE]', ''));
+                    messageContent = `
+                        <div class="topic-share-card">
+                            <div class="topic-share-header">
+                                <span class="topic-share-icon">${topicData.topicIcon}</span>
+                                <div>
+                                    <strong>${this.escapeHtml(topicData.topicName)}</strong>
+                                    <span class="topic-share-count">${topicData.wordsCount} từ</span>
+                                </div>
+                            </div>
+                            <div class="topic-share-actions">
+                                <button class="btn btn-secondary btn-sm" onclick="Explore.previewTopic('${topicData.topicId}')">👁️ Xem</button>
+                                <button class="btn btn-primary btn-sm" onclick="Explore.importTopic('${topicData.topicId}')">📥 Import</button>
+                            </div>
+                        </div>
+                    `;
+                } catch (e) {
+                    // Not valid JSON, render as normal text
+                }
+            }
+            
             return `
                 <div class="chat-message ${isOwn ? 'own' : ''}" data-id="${msg.id}">
                     ${!isOwn ? `<img class="chat-avatar clickable-avatar" src="${msg.userAvatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(msg.userName)}&size=64`}" alt="${msg.userName}" onclick="App.showUserProfile('${msg.userId}')" title="Xem thông tin">` : ''}
                     <div class="chat-bubble">
                         ${!isOwn ? `<div class="chat-sender clickable-name" onclick="App.showUserProfile('${msg.userId}')">${msg.userName}${adminLabel}${badgeHtml}</div>` : ''}
-                        <div class="chat-text">${this.escapeHtml(msg.text)}</div>
+                        <div class="chat-text">${messageContent}</div>
                         <div class="chat-meta">
                             <span class="chat-time">${time}</span>
                             ${isOwn ? `

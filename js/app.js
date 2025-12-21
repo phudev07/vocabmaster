@@ -46,6 +46,7 @@ const App = {
         Import.init();
         PrivateChat.init();
         Challenges.init();
+        Explore.init();
         
         // Load theme
         this.loadTheme();
@@ -211,6 +212,12 @@ const App = {
                     if (typeof Challenges !== 'undefined') {
                         Challenges.fetchChallenges().then(() => Challenges.render());
                     }
+                } else if (view === 'explore') {
+                    this.showView('exploreView');
+                    // Load public topics
+                    if (typeof Explore !== 'undefined') {
+                        Explore.fetchPublicTopics().then(() => Explore.render());
+                    }
                 }
                 
                 // Close sidebar on mobile
@@ -316,6 +323,11 @@ const App = {
             // Mark chat as seen when switching to chat view
             if (viewId === 'chatView' && typeof Chat !== 'undefined') {
                 Chat.markChatAsSeen();
+            }
+            
+            // Load explore topics when switching to explore view
+            if (viewId === 'exploreView' && typeof Explore !== 'undefined') {
+                Explore.fetchPublicTopics().then(() => Explore.render());
             }
         }
     },

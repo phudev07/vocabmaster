@@ -41,14 +41,14 @@ const FirebaseDB = {
         try {
             // Import Firebase modules
             const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-            const { getFirestore, collection, doc, getDocs, getDoc, setDoc, deleteDoc, onSnapshot, addDoc, updateDoc, query, orderBy, limit, serverTimestamp, where } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
+            const { getFirestore, collection, doc, getDocs, getDoc, setDoc, deleteDoc, onSnapshot, addDoc, updateDoc, query, orderBy, limit, serverTimestamp, where, increment } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
             
             // Initialize app
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             
             // Store Firestore functions
-            this.firestore = { collection, doc, getDocs, getDoc, setDoc, deleteDoc, onSnapshot, addDoc, updateDoc, query, orderBy, limit, serverTimestamp, where };
+            this.firestore = { collection, doc, getDocs, getDoc, setDoc, deleteDoc, onSnapshot, addDoc, updateDoc, query, orderBy, limit, serverTimestamp, where, increment };
             
             this.initialized = true;
             console.log('Firebase initialized');
@@ -96,6 +96,10 @@ const FirebaseDB = {
     },
 
     async deleteTopic(topicId) {
+        // Check if topic was public before deleting
+        const topic = Storage.getTopicById(topicId);
+        const wasPublic = topic?.isPublic || false;
+        
         // Delete from localStorage first
         Storage.deleteTopic(topicId);
         
@@ -112,6 +116,17 @@ const FirebaseDB = {
                     await deleteDoc(doc(db, this.getPath('words'), docSnap.id));
                 }
             });
+            
+            // Delete from publicTopics if was public
+            if (wasPublic) {
+                try {
+                    await deleteDoc(doc(db, 'publicTopics', topicId));
+                    console.log('Deleted from publicTopics:', topicId);
+                } catch (e) {
+                    console.log('Could not delete from publicTopics');
+                }
+            }
+            
             console.log('Topic deleted from cloud:', topicId);
         } catch (error) {
             console.error('Delete topic error:', error);

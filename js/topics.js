@@ -167,6 +167,7 @@ const Topics = {
         const title = document.getElementById('topicModalTitle');
         const nameInput = document.getElementById('topicName');
         const idInput = document.getElementById('topicId');
+        const publicCheckbox = document.getElementById('topicPublic');
         
         // Reset form
         document.getElementById('topicForm').reset();
@@ -189,6 +190,7 @@ const Topics = {
             title.textContent = 'Sửa chủ đề';
             nameInput.value = topic.name;
             idInput.value = topic.id;
+            publicCheckbox.checked = topic.isPublic || false;
             
             // Select icon
             document.querySelectorAll('#iconPicker .icon-option').forEach(btn => {
@@ -203,6 +205,9 @@ const Topics = {
             // Add mode
             title.textContent = 'Thêm chủ đề';
             idInput.value = '';
+            // Remember last public preference
+            const lastPublicPref = localStorage.getItem('vocabmaster_lastPublicPref');
+            publicCheckbox.checked = lastPublicPref === 'true';
         }
         
         modal.classList.add('active');
@@ -210,26 +215,46 @@ const Topics = {
     },
 
     // Save topic
-    save() {
+    async save() {
         const name = document.getElementById('topicName').value.trim();
         const id = document.getElementById('topicId').value;
         const icon = document.querySelector('#iconPicker .icon-option.selected')?.dataset.icon || '📁';
         const color = document.querySelector('#colorPicker .color-option.selected')?.dataset.color || '#FF6B6B';
+        const isPublic = document.getElementById('topicPublic').checked;
         
         if (!name) {
             App.showToast('Vui lòng nhập tên chủ đề', 'error');
             return;
         }
 
+        // Remember public preference
+        localStorage.setItem('vocabmaster_lastPublicPref', isPublic.toString());
+
         const topic = {
             id: id || undefined,
             name,
             icon,
-            color
+            color,
+            isPublic
         };
 
+        // Check if was public before (for existing topics)
+        let wasPublic = false;
+        if (id) {
+            const existingTopic = Storage.getTopicById(id);
+            wasPublic = existingTopic?.isPublic || false;
+        }
+
         // Save to Firebase (also saves to localStorage)
-        FirebaseDB.saveTopic(topic);
+        const savedTopic = await FirebaseDB.saveTopic(topic);
+        
+        // Handle public topic sync
+        if (isPublic && Auth.isLoggedIn()) {
+            await Explore.publishTopic(savedTopic.id);
+        } else if (wasPublic && !isPublic) {
+            // Was public, now private - remove from public
+            await Explore.unpublishTopic(id);
+        }
         
         // Close modal
         document.getElementById('topicModal').classList.remove('active');
