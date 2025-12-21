@@ -308,28 +308,112 @@
             </div>
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-icon">📚</div>
+                    <div class="stat-icon stat-icon-books">
+                        <svg viewBox="0 0 64 64" width="40" height="40">
+                            <defs>
+                                <linearGradient id="bookGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#6366f1"/>
+                                    <stop offset="100%" style="stop-color:#8b5cf6"/>
+                                </linearGradient>
+                                <linearGradient id="bookGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#22c55e"/>
+                                    <stop offset="100%" style="stop-color:#16a34a"/>
+                                </linearGradient>
+                            </defs>
+                            <rect class="book book1" x="8" y="12" width="14" height="44" rx="2" fill="url(#bookGrad1)"/>
+                            <rect class="book book2" x="25" y="8" width="14" height="48" rx="2" fill="url(#bookGrad2)"/>
+                            <rect class="book book3" x="42" y="14" width="14" height="42" rx="2" fill="#f59e0b"/>
+                            <rect x="10" y="16" width="10" height="3" fill="rgba(255,255,255,0.4)" rx="1"/>
+                            <rect x="27" y="12" width="10" height="3" fill="rgba(255,255,255,0.4)" rx="1"/>
+                            <rect x="44" y="18" width="10" height="3" fill="rgba(255,255,255,0.4)" rx="1"/>
+                        </svg>
+                    </div>
                     <div class="stat-info">
                         <span class="stat-value" id="statTotalWords">0</span>
                         <span class="stat-label">Tổng từ vựng</span>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">✅</div>
+                    <div class="stat-icon stat-icon-check">
+                        <svg viewBox="0 0 64 64" width="40" height="40">
+                            <defs>
+                                <linearGradient id="checkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#22c55e"/>
+                                    <stop offset="100%" style="stop-color:#16a34a"/>
+                                </linearGradient>
+                            </defs>
+                            <circle class="check-circle" cx="32" cy="32" r="26" fill="url(#checkGrad)"/>
+                            <path class="check-mark" d="M20 32 L28 40 L44 24" stroke="white" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle class="sparkle s1" cx="14" cy="14" r="3" fill="#fcd34d"/>
+                            <circle class="sparkle s2" cx="50" cy="12" r="2" fill="#fcd34d"/>
+                            <circle class="sparkle s3" cx="52" cy="50" r="2.5" fill="#fcd34d"/>
+                        </svg>
+                    </div>
                     <div class="stat-info">
                         <span class="stat-value" id="statMastered">0</span>
                         <span class="stat-label">Đã thuộc</span>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">📝</div>
+                    <div class="stat-icon stat-icon-pencil">
+                        <svg viewBox="0 0 64 64" width="40" height="40">
+                            <defs>
+                                <linearGradient id="pencilGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#f59e0b"/>
+                                    <stop offset="100%" style="stop-color:#d97706"/>
+                                </linearGradient>
+                            </defs>
+                            <rect class="pencil-body" x="10" y="8" width="12" height="48" rx="2" fill="url(#pencilGrad)" transform="rotate(-30 32 32)"/>
+                            <polygon class="pencil-tip" points="32,58 28,48 36,48" fill="#374151"/>
+                            <rect x="10" y="8" width="12" height="8" fill="#ef4444" rx="1" transform="rotate(-30 32 32)"/>
+                            <path class="write-line" d="M38 52 Q44 48 50 52 Q56 56 58 50" stroke="var(--accent-primary)" stroke-width="2" fill="none" stroke-linecap="round"/>
+                        </svg>
+                    </div>
                     <div class="stat-info">
                         <span class="stat-value" id="statLearning">0</span>
                         <span class="stat-label">Đang học</span>
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon">🔥</div>
+                    <div class="stat-icon stat-icon-fire">
+                        <svg viewBox="0 0 64 64" width="40" height="40">
+                            <defs>
+                                <linearGradient id="fireGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#dc2626"/>
+                                    <stop offset="40%" style="stop-color:#f97316"/>
+                                    <stop offset="80%" style="stop-color:#fbbf24"/>
+                                    <stop offset="100%" style="stop-color:#fef08a"/>
+                                </linearGradient>
+                                <linearGradient id="fireGrad2" x1="0%" y1="100%" x2="0%" y2="0%">
+                                    <stop offset="0%" style="stop-color:#f97316"/>
+                                    <stop offset="60%" style="stop-color:#fbbf24"/>
+                                    <stop offset="100%" style="stop-color:#fef9c3"/>
+                                </linearGradient>
+                                <filter id="fireGlow" x="-50%" y="-50%" width="200%" height="200%">
+                                    <feGaussianBlur stdDeviation="2" result="blur"/>
+                                    <feMerge>
+                                        <feMergeNode in="blur"/>
+                                        <feMergeNode in="SourceGraphic"/>
+                                    </feMerge>
+                                </filter>
+                            </defs>
+                            <!-- Base glow -->
+                            <ellipse class="flame-glow" cx="32" cy="60" rx="20" ry="6" fill="rgba(251,146,60,0.5)"/>
+                            <!-- Outer flame -->
+                            <path class="flame flame-outer" d="M32 4 Q50 22 46 36 Q54 30 56 42 Q58 56 38 62 Q18 62 12 44 Q10 32 18 36 Q14 22 32 4Z" fill="url(#fireGrad)" filter="url(#fireGlow)"/>
+                            <!-- Middle flame -->
+                            <path class="flame flame-main" d="M32 12 Q46 26 42 40 Q50 34 52 44 Q52 56 36 60 Q22 58 18 44 Q20 36 26 40 Q22 26 32 12Z" fill="url(#fireGrad2)"/>
+                            <!-- Inner core flame -->
+                            <path class="flame flame-inner" d="M32 28 Q40 36 38 46 Q44 42 46 48 Q46 56 34 58 Q24 56 22 48 Q26 44 28 48 Q26 38 32 28Z" fill="#fef08a"/>
+                            <!-- Hot core -->
+                            <ellipse class="flame-core" cx="32" cy="52" rx="6" ry="8" fill="#fff7ed" opacity="0.8"/>
+                            <!-- Sparks -->
+                            <circle class="spark spark1" cx="22" cy="20" r="2" fill="#fbbf24"/>
+                            <circle class="spark spark2" cx="42" cy="16" r="1.5" fill="#fcd34d"/>
+                            <circle class="spark spark3" cx="36" cy="8" r="1" fill="#fef08a"/>
+                            <circle class="spark spark4" cx="26" cy="12" r="1.5" fill="#fbbf24"/>
+                        </svg>
+                    </div>
                     <div class="stat-info">
                         <span class="stat-value" id="statStreak">0</span>
                         <span class="stat-label">Ngày liên tiếp</span>
@@ -1129,6 +1213,21 @@
                         <button class="color-option" data-color="cyan" title="Cyan">
                             <span style="background: #06b6d4"></span>
                         </button>
+                    </div>
+                </div>
+                
+                <!-- Reminder Setting -->
+                <div class="profile-section">
+                    <h4>⏰ Nhắc nhở học tập</h4>
+                    <div class="reminder-setting">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="reminderEnabled" checked>
+                            <span class="toggle-text">Bật thông báo nhắc học</span>
+                        </label>
+                        <div class="reminder-time-row" id="reminderTimeRow">
+                            <span>Nhắc lúc:</span>
+                            <input type="time" id="reminderTime" value="20:00">
+                        </div>
                     </div>
                 </div>
                 

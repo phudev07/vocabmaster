@@ -76,6 +76,11 @@ const Auth = {
                             Stats.checkStreakOnLoad();
                             Stats.render();
                             Topics.render();
+                            
+                            // Show notification permission prompt
+                            if (typeof Notifications !== 'undefined') {
+                                Notifications.checkAndPrompt();
+                            }
                         });
                     } else {
                         console.log('User signed out');

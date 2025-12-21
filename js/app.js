@@ -523,6 +523,33 @@ const App = {
             const currentColor = document.documentElement.getAttribute('data-color') || '';
             this.updateColorSelector(currentColor);
         }
+        
+        // Reminder settings handlers
+        if (typeof Notifications !== 'undefined') {
+            Notifications.loadReminderSettings();
+            
+            const reminderEnabled = document.getElementById('reminderEnabled');
+            const reminderTime = document.getElementById('reminderTime');
+            const reminderTimeRow = document.getElementById('reminderTimeRow');
+            
+            if (reminderEnabled && reminderTime && reminderTimeRow) {
+                // Toggle time row visibility based on enabled state
+                reminderTimeRow.style.opacity = reminderEnabled.checked ? '1' : '0.5';
+                reminderTime.disabled = !reminderEnabled.checked;
+                
+                reminderEnabled.onchange = () => {
+                    reminderTimeRow.style.opacity = reminderEnabled.checked ? '1' : '0.5';
+                    reminderTime.disabled = !reminderEnabled.checked;
+                    Notifications.saveReminderSettings(reminderEnabled.checked, reminderTime.value);
+                    App.showToast(reminderEnabled.checked ? '⏰ Đã bật nhắc nhở' : '🔕 Đã tắt nhắc nhở', 'success');
+                };
+                
+                reminderTime.onchange = () => {
+                    Notifications.saveReminderSettings(reminderEnabled.checked, reminderTime.value);
+                    App.showToast(`⏰ Đã đặt nhắc nhở lúc ${reminderTime.value}`, 'success');
+                };
+            }
+        }
     },
     
     // Open badge selector modal

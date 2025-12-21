@@ -61,6 +61,9 @@ const Notifications = {
                 console.log('Notification permission granted');
                 App.showToast('Đã bật thông báo! 🔔', 'success');
                 
+                // Mark as prompted
+                localStorage.setItem('vocabmaster_notif_prompted', 'true');
+                
                 // Get FCM token
                 const { getToken } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js');
                 const token = await getToken(this.messaging, {
@@ -73,9 +76,13 @@ const Notifications = {
                     await this.saveToken(token);
                 }
                 
+                // Start daily reminders
+                this.scheduleDailyReminder();
+                
                 return true;
             } else {
                 console.log('Notification permission denied');
+                localStorage.setItem('vocabmaster_notif_prompted', 'true');
                 App.showToast('Bạn đã từ chối thông báo', 'warning');
                 return false;
             }
@@ -84,6 +91,73 @@ const Notifications = {
             App.showToast('Không thể bật thông báo', 'error');
             return false;
         }
+    },
+    
+    // Show permission prompt modal
+    showPermissionPrompt() {
+        // Don't show if already prompted or permission already granted/denied
+        if (localStorage.getItem('vocabmaster_notif_prompted')) return;
+        if (Notification.permission !== 'default') return;
+        if (!('Notification' in window)) return;
+        
+        // Create modal
+        const modal = document.createElement('div');
+        modal.id = 'notificationPermissionModal';
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-overlay"></div>
+            <div class="modal-content" style="max-width: 400px; text-align: center;">
+                <div class="modal-header" style="border: none; padding-bottom: 0;">
+                    <h2 style="width: 100%; text-align: center;">🔔 Bật thông báo</h2>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <div class="notification-prompt-icon" style="font-size: 4rem; margin-bottom: 1rem;">
+                        📱
+                    </div>
+                    <p style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                        Cho phép VocabMaster gửi thông báo để:
+                    </p>
+                    <ul style="text-align: left; padding-left: 1.5rem; margin-bottom: 1.5rem; color: var(--text-secondary);">
+                        <li style="margin-bottom: 0.5rem;">💬 Nhận tin nhắn mới</li>
+                        <li style="margin-bottom: 0.5rem;">⚔️ Được mời đấu từ vựng</li>
+                        <li style="margin-bottom: 0.5rem;">📚 Nhắc lịch ôn tập hàng ngày</li>
+                        <li>🔥 Giữ streak không bị mất</li>
+                    </ul>
+                    <div style="display: flex; gap: 0.75rem; justify-content: center;">
+                        <button class="btn btn-secondary" id="notifLaterBtn">Để sau</button>
+                        <button class="btn btn-primary" id="notifAllowBtn">
+                            <span style="margin-right: 0.5rem;">🔔</span> Cho phép
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Bind events
+        modal.querySelector('.modal-overlay').addEventListener('click', () => {
+            modal.remove();
+            localStorage.setItem('vocabmaster_notif_prompted', 'later');
+        });
+        
+        modal.querySelector('#notifLaterBtn').addEventListener('click', () => {
+            modal.remove();
+            localStorage.setItem('vocabmaster_notif_prompted', 'later');
+        });
+        
+        modal.querySelector('#notifAllowBtn').addEventListener('click', async () => {
+            modal.remove();
+            await this.requestPermission();
+        });
+    },
+    
+    // Check and prompt on login (call this after user logs in)
+    checkAndPrompt() {
+        // Delay to not interrupt login flow
+        setTimeout(() => {
+            this.showPermissionPrompt();
+        }, 2000);
     },
     
     // Save FCM token to Firestore
@@ -115,23 +189,44 @@ const Notifications = {
     
     // Schedule daily reminder (using setTimeout as fallback)
     scheduleDailyReminder() {
+        // Check if reminder is enabled
+        const settings = Storage.getSettings();
+        if (settings.reminderEnabled === false) {
+            console.log('Daily reminder disabled');
+            return;
+        }
+        
+        // Get reminder time from settings (default 20:00)
+        const reminderTimeStr = settings.reminderTime || '20:00';
+        const [hours, minutes] = reminderTimeStr.split(':').map(Number);
+        
         const now = new Date();
         const reminderTime = new Date();
-        reminderTime.setHours(20, 0, 0, 0); // 8 PM
+        reminderTime.setHours(hours, minutes, 0, 0);
         
-        // If it's past 8 PM, schedule for tomorrow
+        // If it's past reminder time, schedule for tomorrow
         if (now > reminderTime) {
             reminderTime.setDate(reminderTime.getDate() + 1);
         }
         
         const timeUntilReminder = reminderTime - now;
         
-        setTimeout(() => {
+        // Clear existing timer
+        if (this.reminderTimer) {
+            clearTimeout(this.reminderTimer);
+        }
+        
+        this.reminderTimer = setTimeout(() => {
             const dueWords = Storage.getDueWords();
             if (dueWords.length > 0) {
                 this.showLocalNotification(
                     '📚 VocabMaster',
                     `Bạn có ${dueWords.length} từ cần ôn tập hôm nay!`
+                );
+            } else {
+                this.showLocalNotification(
+                    '🎉 VocabMaster', 
+                    'Tuyệt vời! Bạn đã hoàn thành ôn tập hôm nay!'
                 );
             }
             // Schedule next reminder
@@ -139,6 +234,38 @@ const Notifications = {
         }, timeUntilReminder);
         
         console.log('Reminder scheduled for:', reminderTime.toLocaleString());
+    },
+    
+    // Save reminder settings
+    saveReminderSettings(enabled, time) {
+        const settings = Storage.getSettings();
+        settings.reminderEnabled = enabled;
+        settings.reminderTime = time;
+        Storage.saveSettings(settings);
+        
+        // Reschedule reminder
+        if (enabled && this.isEnabled()) {
+            this.scheduleDailyReminder();
+        } else if (this.reminderTimer) {
+            clearTimeout(this.reminderTimer);
+            this.reminderTimer = null;
+        }
+        
+        console.log('Reminder settings saved:', { enabled, time });
+    },
+    
+    // Load reminder settings into UI
+    loadReminderSettings() {
+        const settings = Storage.getSettings();
+        const enabledCheckbox = document.getElementById('reminderEnabled');
+        const timeInput = document.getElementById('reminderTime');
+        
+        if (enabledCheckbox) {
+            enabledCheckbox.checked = settings.reminderEnabled !== false;
+        }
+        if (timeInput) {
+            timeInput.value = settings.reminderTime || '20:00';
+        }
     },
     
     // Check if notifications are enabled
