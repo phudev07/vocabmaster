@@ -32,6 +32,7 @@ const Notifications = {
                     // Tag user when subscribed
                     if (Auth.isLoggedIn()) {
                         this.tagUser();
+                        this.updateReminderTag(); // Sync reminder tags too
                     }
                 }
             });
@@ -122,20 +123,34 @@ const Notifications = {
     
     // Update reminder time tag for scheduled notifications
     async updateReminderTag() {
-        if (!window.OneSignal) return;
+        if (!window.OneSignal) {
+            console.log('OneSignal not available for tags');
+            return;
+        }
         
         try {
             const settings = Storage.getSettings();
             const reminderEnabled = settings.reminderEnabled !== false;
             const reminderTime = settings.reminderTime || '20:00';
             
+            console.log('Updating OneSignal tags:', { reminder_enabled: reminderEnabled, reminder_time: reminderTime });
+            
             await window.OneSignal.User.addTags({
                 reminder_enabled: reminderEnabled ? 'true' : 'false',
                 reminder_time: reminderTime
             });
-            console.log('Reminder tags updated:', { reminderEnabled, reminderTime });
+            
+            console.log('Reminder tags updated successfully!');
+            
+            // Show confirmation to user
+            if (typeof App !== 'undefined' && App.showToast) {
+                App.showToast(`🔔 Đã đồng bộ nhắc nhở lúc ${reminderTime}`, 'success');
+            }
         } catch (error) {
             console.error('Error updating reminder tags:', error);
+            if (typeof App !== 'undefined' && App.showToast) {
+                App.showToast('Lỗi đồng bộ thông báo', 'error');
+            }
         }
     },
     
