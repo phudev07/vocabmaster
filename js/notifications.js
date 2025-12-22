@@ -319,7 +319,7 @@ const Notifications = {
     },
     
     // Save reminder settings
-    saveReminderSettings(enabled, time) {
+    async saveReminderSettings(enabled, time) {
         const settings = Storage.getSettings();
         settings.reminderEnabled = enabled;
         settings.reminderTime = time;
@@ -333,7 +333,27 @@ const Notifications = {
             this.reminderTimer = null;
         }
         
-        // Update OneSignal tags for server-side scheduling
+        // Save to Firebase (works on all devices including iOS)
+        if (typeof FirebaseDB !== 'undefined' && FirebaseDB.initialized) {
+            // Get OneSignal player ID if available
+            let playerId = null;
+            try {
+                if (window.OneSignal && window.OneSignal.User) {
+                    const id = await window.OneSignal.User.PushSubscription.id;
+                    playerId = id || null;
+                }
+            } catch (e) {
+                console.log('Could not get OneSignal player ID');
+            }
+            
+            const saved = await FirebaseDB.saveReminderSettings(enabled, time, playerId);
+            if (saved) {
+                console.log('Reminder saved to Firebase');
+                App.showToast(`🔔 Đã lưu nhắc nhở lúc ${time}`, 'success');
+            }
+        }
+        
+        // Also try OneSignal tags (works on desktop/Android)
         this.updateReminderTag();
         
         console.log('Reminder settings saved:', { enabled, time });

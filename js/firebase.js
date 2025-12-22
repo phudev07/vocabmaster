@@ -313,11 +313,63 @@ const FirebaseDB = {
             const stats = Storage.getStats();
             await setDoc(doc(db, 'settings', 'stats'), stats);
             
-            console.log('Synced to cloud');
+        console.log('Synced to cloud');
             App.showToast('Đã đồng bộ lên cloud', 'success');
         } catch (error) {
             console.error('Sync to cloud error:', error);
             App.showToast('Lỗi đồng bộ', 'error');
+        }
+    },
+
+    // ==================== Reminder Settings (for push notifications) ====================
+    async saveReminderSettings(enabled, time, oneSignalPlayerId = null) {
+        if (!this.initialized || !this.userId) {
+            console.log('Firebase not ready for reminder settings');
+            return false;
+        }
+        
+        try {
+            const { doc, setDoc, serverTimestamp } = this.firestore;
+            
+            // Save to user's settings
+            await setDoc(doc(db, this.getPath('settings'), 'reminder'), {
+                enabled: enabled,
+                time: time,
+                updatedAt: serverTimestamp()
+            });
+            
+            // Also save to global collection for backend to query
+            await setDoc(doc(db, 'reminderSubscriptions', this.userId), {
+                userId: this.userId,
+                enabled: enabled,
+                time: time,
+                oneSignalPlayerId: oneSignalPlayerId,
+                updatedAt: serverTimestamp()
+            });
+            
+            console.log('Reminder settings saved to Firebase:', { enabled, time });
+            return true;
+        } catch (error) {
+            console.error('Save reminder settings error:', error);
+            return false;
+        }
+    },
+
+    async getReminderSettings() {
+        if (!this.initialized || !this.userId) return null;
+        
+        try {
+            const { doc, getDoc } = this.firestore;
+            const docRef = doc(db, this.getPath('settings'), 'reminder');
+            const docSnap = await getDoc(docRef);
+            
+            if (docSnap.exists()) {
+                return docSnap.data();
+            }
+            return null;
+        } catch (error) {
+            console.error('Get reminder settings error:', error);
+            return null;
         }
     }
 };
