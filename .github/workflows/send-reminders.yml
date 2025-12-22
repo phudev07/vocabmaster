@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Send notifications via OneSignal
+      # Step 1: Send via OneSignal tags (works for desktop/Android)
+      - name: Send to tagged users (OneSignal)
         env:
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
           ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
@@ -20,8 +21,8 @@ jobs:
           CURRENT_HOUR=$(TZ='Asia/Ho_Chi_Minh' date +%H):00
           echo "Current Vietnam time hour: $CURRENT_HOUR"
           
-          # Call OneSignal API to send notifications to users with matching reminder_time
-          curl -X POST https://api.onesignal.com/notifications \
+          # Call OneSignal API to send to users with matching tags
+          RESPONSE=$(curl -s -X POST https://api.onesignal.com/notifications \
             -H "Content-Type: application/json" \
             -H "Authorization: Key $ONESIGNAL_API_KEY" \
             -d "{
@@ -34,4 +35,49 @@ jobs:
               \"headings\": {\"en\": \"📚 VocabMaster\"},
               \"contents\": {\"en\": \"Đã đến giờ ôn tập từ vựng! Hãy dành 5 phút để học nhé 🔥\"},
               \"url\": \"https://vocabulary.click\"
-            }"
+            }")
+          echo "OneSignal tags response: $RESPONSE"
+      
+      # Step 2: Query Firebase and send to users by player ID (for iOS)
+      - name: Send to Firebase users (iOS support)
+        env:
+          ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+          FIREBASE_PROJECT_ID: vocabmaster-4c784
+        run: |
+          CURRENT_HOUR=$(TZ='Asia/Ho_Chi_Minh' date +%H):00
+          echo "Querying Firebase for users with reminder at $CURRENT_HOUR"
+          
+          # Query Firebase REST API for reminderSubscriptions
+          # Note: This requires Firestore to allow public read on reminderSubscriptions collection
+          FIREBASE_URL="https://firestore.googleapis.com/v1/projects/$FIREBASE_PROJECT_ID/databases/(default)/documents/reminderSubscriptions"
+          
+          USERS=$(curl -s "$FIREBASE_URL")
+          echo "Firebase response received"
+          
+          # Parse JSON to find users with matching time and enabled=true
+          # Extract player IDs and send notifications
+          PLAYER_IDS=$(echo "$USERS" | jq -r '.documents[]? | select(.fields.enabled.booleanValue == true and .fields.time.stringValue == "'$CURRENT_HOUR'" and .fields.oneSignalPlayerId.stringValue != null) | .fields.oneSignalPlayerId.stringValue' 2>/dev/null || echo "")
+          
+          if [ -n "$PLAYER_IDS" ] && [ "$PLAYER_IDS" != "null" ]; then
+            echo "Found player IDs from Firebase: $PLAYER_IDS"
+            
+            # Convert to JSON array
+            PLAYER_ARRAY=$(echo "$PLAYER_IDS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            
+            if [ "$PLAYER_ARRAY" != "[]" ]; then
+              curl -s -X POST https://api.onesignal.com/notifications \
+                -H "Content-Type: application/json" \
+                -H "Authorization: Key $ONESIGNAL_API_KEY" \
+                -d "{
+                  \"app_id\": \"$ONESIGNAL_APP_ID\",
+                  \"include_player_ids\": $PLAYER_ARRAY,
+                  \"headings\": {\"en\": \"📚 VocabMaster\"},
+                  \"contents\": {\"en\": \"Đã đến giờ ôn tập từ vựng! Hãy dành 5 phút để học nhé 🔥\"},
+                  \"url\": \"https://vocabulary.click\"
+                }"
+              echo "Sent to Firebase users"
+            fi
+          else
+            echo "No Firebase users found for $CURRENT_HOUR"
+          fi
