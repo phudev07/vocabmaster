@@ -12,6 +12,9 @@ jobs:
     
     steps:
       - name: Send notifications via OneSignal
+        env:
+          ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
         run: |
           # Get current hour in Vietnam timezone (UTC+7)
           CURRENT_HOUR=$(TZ='Asia/Ho_Chi_Minh' date +%H):00
@@ -20,15 +23,15 @@ jobs:
           # Call OneSignal API to send notifications to users with matching reminder_time
           curl -X POST https://api.onesignal.com/notifications \
             -H "Content-Type: application/json" \
-            -H "Authorization: Key ${{ secrets.ONESIGNAL_API_KEY }}" \
-            -d '{
-              "app_id": "${{ secrets.ONESIGNAL_APP_ID }}",
-              "filters": [
-                {"field": "tag", "key": "reminder_enabled", "relation": "=", "value": "true"},
-                {"operator": "AND"},
-                {"field": "tag", "key": "reminder_time", "relation": "=", "value": "'"$CURRENT_HOUR"'"}
+            -H "Authorization: Key $ONESIGNAL_API_KEY" \
+            -d "{
+              \"app_id\": \"$ONESIGNAL_APP_ID\",
+              \"filters\": [
+                {\"field\": \"tag\", \"key\": \"reminder_enabled\", \"relation\": \"=\", \"value\": \"true\"},
+                {\"operator\": \"AND\"},
+                {\"field\": \"tag\", \"key\": \"reminder_time\", \"relation\": \"=\", \"value\": \"$CURRENT_HOUR\"}
               ],
-              "headings": {"en": "📚 VocabMaster"},
-              "contents": {"en": "Đã đến giờ ôn tập từ vựng! Hãy dành 5 phút để học nhé 🔥"},
-              "url": "https://vocabulary.click"
-            }'
+              \"headings\": {\"en\": \"📚 VocabMaster\"},
+              \"contents\": {\"en\": \"Đã đến giờ ôn tập từ vựng! Hãy dành 5 phút để học nhé 🔥\"},
+              \"url\": \"https://vocabulary.click\"
+            }"
