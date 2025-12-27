@@ -133,16 +133,16 @@ const Explore = {
             return `
             <div class="explore-topic-card ${isOwn ? 'own-topic' : ''}">
                 <div class="explore-topic-left">
-                    <span class="explore-topic-icon" style="background: ${topic.topicColor}">${topic.topicIcon}</span>
+                    <span class="explore-topic-icon" style="background: ${topic.topicColor}">${this.escapeHtml(topic.topicIcon)}</span>
                     <div class="explore-topic-info">
-                        <h3 class="explore-topic-name">${topic.topicName}</h3>
+                        <h3 class="explore-topic-name">${this.escapeHtml(topic.topicName)}</h3>
                         <p class="explore-topic-meta">${topic.wordsCount} từ</p>
                     </div>
                 </div>
                 <div class="explore-topic-right">
-                    <div class="explore-topic-user" onclick="Explore.filterByUser('${topic.userId}')" title="Xem các chủ đề của ${topic.userName}">
+                    <div class="explore-topic-user" onclick="Explore.filterByUser('${topic.userId}')" title="Xem các chủ đề của ${this.escapeHtml(topic.userName)}">
                         <img src="${avatarUrl}" class="explore-user-avatar" alt="">
-                        <span class="explore-user-name">${isOwn ? 'Bạn' : topic.userName}</span>
+                        <span class="explore-user-name">${isOwn ? 'Bạn' : this.escapeHtml(topic.userName)}</span>
                     </div>
                     <div class="explore-topic-actions">
                         <button class="btn-icon" onclick="Explore.previewTopic('${topic.id}')" title="Xem trước">👁️</button>
@@ -181,7 +181,7 @@ const Explore = {
         container.innerHTML = `
             <div class="explore-user-filter">
                 <img src="${avatarUrl}" class="explore-filter-avatar">
-                <span>Chủ đề của <strong>${userName}</strong></span>
+                <span>Chủ đề của <strong>${this.escapeHtml(userName)}</strong></span>
                 <button class="btn-icon" onclick="Explore.filterUserId = null; Explore.render();" title="Xóa bộ lọc">✕</button>
             </div>
             ${userTopics.map(topic => {
@@ -189,9 +189,9 @@ const Explore = {
                 return `
                 <div class="explore-topic-card ${isOwn ? 'own-topic' : ''}">
                     <div class="explore-topic-left">
-                        <span class="explore-topic-icon" style="background: ${topic.topicColor}">${topic.topicIcon}</span>
+                <span class="explore-topic-icon" style="background: ${topic.topicColor}">${this.escapeHtml(topic.topicIcon)}</span>
                         <div class="explore-topic-info">
-                            <h3 class="explore-topic-name">${topic.topicName}</h3>
+                            <h3 class="explore-topic-name">${this.escapeHtml(topic.topicName)}</h3>
                             <p class="explore-topic-meta">${topic.wordsCount} từ</p>
                         </div>
                     </div>
@@ -250,11 +250,11 @@ const Explore = {
             <div class="modal-overlay"></div>
             <div class="modal-content modal-large">
                 <div class="modal-header">
-                    <h2>${topic.topicIcon} ${topic.topicName}</h2>
+                    <h2>${this.escapeHtml(topic.topicIcon)} ${this.escapeHtml(topic.topicName)}</h2>
                     <button class="btn-icon modal-close" aria-label="Đóng">✕</button>
                 </div>
                 <p style="padding: 0 1rem; color: var(--text-muted);">
-                    ${topic.wordsCount} từ • bởi ${topic.userName}
+                    ${topic.wordsCount} từ • bởi ${this.escapeHtml(topic.userName)}
                 </p>
                 <div class="study-list" style="padding: 1rem; max-height: 50vh; overflow-y: auto;">
                     ${topic.words.map((word, index) => `
