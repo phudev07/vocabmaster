@@ -3824,6 +3824,7 @@ body {
         flex-shrink: 0;
         margin: 0;
         padding: 0.75rem 1rem;
+        padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
         background: var(--bg-secondary);
         border-bottom: 1px solid var(--border-color);
         flex-wrap: nowrap !important;
@@ -3862,6 +3863,7 @@ body {
     .chat-form {
         flex-shrink: 0;
         padding: 0.5rem;
+        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
         border-top: 1px solid var(--border-color);
     }
     
@@ -3913,6 +3915,7 @@ body {
         flex-shrink: 0;
         margin: 0;
         padding: 0.75rem 1rem;
+        padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
         background: var(--bg-secondary);
         border-bottom: 1px solid var(--border-color);
     }
@@ -3934,6 +3937,7 @@ body {
     .private-form {
         flex-shrink: 0;
         padding: 0.75rem;
+        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
         background: var(--bg-secondary);
     }
     
