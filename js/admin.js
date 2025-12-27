@@ -283,10 +283,10 @@ const Admin = {
                         <tr data-uid="${user.id}" class="${user.isBanned ? 'banned-user' : ''}">
                             <td><img src="${user.photoURL || ''}" class="admin-avatar" alt=""></td>
                             <td>
-                                ${user.displayName || 'N/A'}
+                                ${Security.sanitizeText(user.displayName, 50) || 'N/A'}
                                 ${user.isAdmin ? '<span class="admin-badge">Admin</span>' : ''}
                             </td>
-                            <td>${user.email || 'N/A'}</td>
+                            <td>${Security.sanitizeText(user.email, 100) || 'N/A'}</td>
                             <td>${user.xp || 0}</td>
                             <td>${user.streak || 0}</td>
                             <td>${user.isBanned ? '<span class="banned-badge">🚫 Banned</span>' : '<span class="active-badge">✅ Active</span>'}</td>
@@ -316,10 +316,10 @@ const Admin = {
         container.innerHTML = this.messages.map(msg => `
             <div class="admin-message" data-id="${msg.id}">
                 <div class="admin-message-info">
-                    <strong>${msg.userName}</strong>
+                    <strong>${Security.sanitizeText(msg.userName, 50)}</strong>
                     <span class="admin-message-time">${msg.timestamp.toLocaleString('vi-VN')}</span>
                 </div>
-                <div class="admin-message-text">${msg.text}</div>
+                <div class="admin-message-text">${Security.sanitizeText(msg.text, 500)}</div>
                 <button class="btn-icon admin-message-delete" onclick="Admin.confirmDeleteMessage('${msg.id}')">🗑️</button>
             </div>
         `).join('');
@@ -441,7 +441,7 @@ const Admin = {
                 <div class="user-data-list">
                     ${topics.map(t => `
                         <div class="user-data-item">
-                            <span>${t.icon || '📁'} ${t.name}</span>
+                            <span>${t.icon || '📁'} ${Security.sanitizeText(t.name, 50)}</span>
                             <button class="btn-icon" onclick="Admin.deleteTopicConfirm('${uid}', '${t.id}')">🗑️</button>
                         </div>
                     `).join('') || '<p>Chưa có topic</p>'}
@@ -451,7 +451,7 @@ const Admin = {
                 <div class="user-data-list" style="max-height: 200px; overflow-y: auto;">
                     ${words.slice(0, 50).map(w => `
                         <div class="user-data-item">
-                            <span><strong>${w.english}</strong> - ${w.vietnamese}</span>
+                            <span><strong>${Security.sanitizeText(w.english, 100)}</strong> - ${Security.sanitizeText(w.vietnamese, 200)}</span>
                         </div>
                     `).join('') || '<p>Chưa có từ</p>'}
                     ${words.length > 50 ? `<p class="text-muted">...và ${words.length - 50} từ khác</p>` : ''}

@@ -316,8 +316,8 @@ const PrivateChat = {
             <div class="conversation-item" onclick="PrivateChat.openConversation('${conv.id}')">
                 <img src="${conv.otherUser.avatar}" class="conversation-avatar" alt="">
                 <div class="conversation-info">
-                    <div class="conversation-name">${conv.otherUser.name}</div>
-                    <div class="conversation-preview">${conv.lastMessage || 'Chưa có tin nhắn'}</div>
+                    <div class="conversation-name">${Security.sanitizeText(conv.otherUser.name, 50)}</div>
+                    <div class="conversation-preview">${Security.sanitizeText(conv.lastMessage, 50) || 'Chưa có tin nhắn'}</div>
                 </div>
                 <div class="conversation-time">${this.formatTime(conv.lastMessageTime)}</div>
             </div>

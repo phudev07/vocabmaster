@@ -66,7 +66,7 @@ const Topics = {
                         data-topic-id="${topic.id}">
                     <span class="topic-color" style="background: ${topic.color}"></span>
                     <span style="margin-right: 0.5rem">${topic.icon}</span>
-                    <span class="topic-name">${topic.name}</span>
+                    <span class="topic-name">${Security.sanitizeText(topic.name, 50)}</span>
                     <span class="topic-count">${wordCount}</span>
                     <div class="topic-actions">
                         <span class="btn-icon" onclick="event.stopPropagation(); Topics.openModal('${topic.id}')">✏️</span>
@@ -321,7 +321,7 @@ const Topics = {
             html += `
                 <button class="topic-pill ${isActive ? 'active' : ''}" data-topic-id="${topic.id}">
                     <span class="topic-pill-color" style="background: ${topic.color}"></span>
-                    ${topic.icon} ${topic.name}
+                    ${topic.icon} ${Security.sanitizeText(topic.name, 50)}
                     <span class="topic-pill-count">(${wordCount})</span>
                 </button>
             `;
@@ -397,7 +397,7 @@ const Topics = {
                         <div class="topic-list-color-bar" style="background: ${topic.color}"></div>
                         <span class="topic-list-icon">${topic.icon}</span>
                         <div class="topic-list-info">
-                            <div class="topic-list-name">${topic.name}</div>
+                            <div class="topic-list-name">${Security.sanitizeText(topic.name, 50)}</div>
                             <div class="topic-list-count">${wordCount} từ</div>
                         </div>
                         <span class="topic-list-arrow">›</span>
@@ -457,7 +457,7 @@ const Topics = {
         menu.id = 'topicContextMenu';
         menu.className = 'context-menu';
         menu.innerHTML = `
-            <div class="context-menu-header">${topic.icon} ${topic.name}</div>
+            <div class="context-menu-header">${topic.icon} ${Security.sanitizeText(topic.name, 50)}</div>
             <button class="context-menu-item" onclick="Topics.openModal('${topicId}'); Topics.hideContextMenu();">
                 <span>✏️</span> Sửa chủ đề
             </button>

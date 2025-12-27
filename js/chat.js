@@ -216,9 +216,9 @@ const Chat = {
             
             return `
                 <div class="chat-message ${isOwn ? 'own' : ''}" data-id="${msg.id}">
-                    ${!isOwn ? `<img class="chat-avatar clickable-avatar" src="${msg.userAvatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(msg.userName)}&size=64`}" alt="${msg.userName}" onclick="App.showUserProfile('${msg.userId}')" title="Xem thông tin">` : ''}
+                    ${!isOwn ? `<img class="chat-avatar clickable-avatar" src="${msg.userAvatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(msg.userName)}&size=64`}" alt="" onclick="App.showUserProfile('${msg.userId}')" title="Xem thông tin">` : ''}
                     <div class="chat-bubble">
-                        ${!isOwn ? `<div class="chat-sender clickable-name" onclick="App.showUserProfile('${msg.userId}')">${msg.userName}${adminLabel}${badgeHtml}</div>` : ''}
+                        ${!isOwn ? `<div class="chat-sender clickable-name" onclick="App.showUserProfile('${msg.userId}')">${Security.sanitizeText(msg.userName, 50)}${adminLabel}${badgeHtml}</div>` : ''}
                         <div class="chat-text">${messageContent}</div>
                         <div class="chat-meta">
                             <span class="chat-time">${time}</span>

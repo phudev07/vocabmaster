@@ -157,9 +157,9 @@ const Leaderboard = {
             return `
                 <div class="leaderboard-item" onclick="App.showUserProfile('${user.id}')" style="cursor: pointer;">
                     <span class="leaderboard-rank ${rankClass}">${rankIcon}</span>
-                    <img class="leaderboard-avatar" src="${user.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name)}&size=64`}" alt="${user.name}">
+                    <img class="leaderboard-avatar" src="${user.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name)}&size=64`}" alt="">
                     <div class="leaderboard-info">
-                        <div class="leaderboard-name">${user.name}${Badges.getBadgeHtml(user, 'small')}</div>
+                        <div class="leaderboard-name">${Security.sanitizeText(user.name, 50)}${Badges.getBadgeHtml(user, 'small')}</div>
                         <div class="leaderboard-xp">${user.xp} XP • ${user.totalWords} từ • 🔥${user.streak}</div>
                     </div>
                 </div>
@@ -186,9 +186,9 @@ const Leaderboard = {
             return `
                 <div class="leaderboard-item ${isCurrentUser ? 'current-user' : ''}" onclick="App.showUserProfile('${user.id}')" style="cursor: pointer;">
                     <span class="leaderboard-rank">${rankIcon}</span>
-                    <img class="leaderboard-avatar" src="${user.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name)}&size=64`}" alt="${user.name}">
+                    <img class="leaderboard-avatar" src="${user.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name)}&size=64`}" alt="">
                     <div class="leaderboard-info">
-                        <div class="leaderboard-name">${user.name}${Badges.getBadgeHtml(user, 'small')}${isCurrentUser ? ' (Bạn)' : ''}</div>
+                        <div class="leaderboard-name">${Security.sanitizeText(user.name, 50)}${Badges.getBadgeHtml(user, 'small')}${isCurrentUser ? ' (Bạn)' : ''}</div>
                         <div class="leaderboard-xp">${user.xp} XP</div>
                     </div>
                 </div>
@@ -232,8 +232,8 @@ const Leaderboard = {
             return `
                 <div class="online-user ${isCurrentUser ? 'current-user' : ''}">
                     <span class="online-dot"></span>
-                    <img src="${user.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name)}&size=64`}" alt="${user.name}">
-                    <span>${user.name}${isCurrentUser ? ' (Bạn)' : ''}</span>
+                    <img src="${user.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name)}&size=64`}" alt="">
+                    <span>${Security.sanitizeText(user.name, 50)}${isCurrentUser ? ' (Bạn)' : ''}</span>
                 </div>
             `;
         }).join('');
@@ -355,9 +355,9 @@ const Leaderboard = {
                             return `
                                 <div class="leaderboard-item ${isCurrentUser ? 'current-user' : ''}" onclick="App.showUserProfile('${user.id}')" style="cursor: pointer;">
                                     <span class="leaderboard-rank">${rankIcon}</span>
-                                    <img class="leaderboard-avatar" src="${user.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name)}&size=64`}" alt="${user.name}">
+                                    <img class="leaderboard-avatar" src="${user.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(user.name)}&size=64`}" alt="">
                                     <div class="leaderboard-info">
-                                        <div class="leaderboard-name">${user.name}${Badges.getBadgeHtml(user, 'small')}${isCurrentUser ? ' (Bạn)' : ''}</div>
+                                        <div class="leaderboard-name">${Security.sanitizeText(user.name, 50)}${Badges.getBadgeHtml(user, 'small')}${isCurrentUser ? ' (Bạn)' : ''}</div>
                                         <div class="leaderboard-xp">${user.xp} XP • ${user.totalWords} từ • 🔥${user.streak}</div>
                                     </div>
                                 </div>

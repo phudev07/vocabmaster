@@ -92,7 +92,7 @@ const Vocabulary = {
                     <div class="word-content">
                         <span class="word-english">${this.escapeHtml(word.english)}</span>
                         <span class="word-vietnamese">${this.escapeHtml(word.vietnamese)}</span>
-                        ${showTopicName && topic ? `<span style="font-size: 0.75rem; color: var(--text-muted)">${topic.icon} ${topic.name}</span>` : ''}
+                        ${showTopicName && topic ? `<span style="font-size: 0.75rem; color: var(--text-muted)">${topic.icon} ${Security.sanitizeText(topic.name, 50)}</span>` : ''}
                     </div>
                     <div class="word-status">
                         <span class="word-status-badge ${status}">${statusText}</span>
