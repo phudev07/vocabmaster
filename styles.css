@@ -3898,7 +3898,7 @@ body {
         top: var(--header-height);
         left: 0;
         right: 0;
-        bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+        bottom: 60px;
         flex-direction: column;
         padding: 0;
         margin: 0;
@@ -3971,7 +3971,7 @@ body {
         top: var(--header-height);
         left: 0;
         right: 0;
-        bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+        bottom: 60px;
         flex-direction: column;
         padding: 0;
         margin: 0;
