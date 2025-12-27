@@ -54,6 +54,9 @@ const App = {
         // Bind global events
         this.bindEvents();
         
+        // Bind bottom nav events (mobile)
+        this.bindBottomNavEvents();
+        
         // Initial render
         Stats.render();
         Topics.render();
@@ -349,11 +352,36 @@ const App = {
     toggleTheme() {
         const current = document.documentElement.getAttribute('data-theme');
         const newTheme = current === 'dark' ? 'light' : 'dark';
-        
-        document.documentElement.setAttribute('data-theme', newTheme);
+        this.setThemeMode(newTheme);
+    },
+    
+    // Set theme mode (light/dark) - for settings
+    setThemeMode(mode) {
+        document.documentElement.setAttribute('data-theme', mode);
         const settings = Storage.getSettings();
-        settings.theme = newTheme;
+        settings.theme = mode;
         Storage.saveSettings(settings);
+        
+        // Update theme mode buttons in settings
+        document.querySelectorAll('.theme-mode-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.theme === mode);
+        });
+    },
+    
+    // Sync data
+    syncData() {
+        if (!Auth.isLoggedIn()) {
+            this.showToast('Vui lòng đăng nhập để đồng bộ', 'warning');
+            return;
+        }
+        
+        this.showToast('Đang đồng bộ...', 'info');
+        FirebaseDB.syncAllData().then(() => {
+            this.showToast('Đã đồng bộ thành công!', 'success');
+        }).catch(err => {
+            console.error('Sync error:', err);
+            this.showToast('Lỗi đồng bộ', 'error');
+        });
     },
     
     // Set color theme
@@ -374,6 +402,41 @@ const App = {
         container.querySelectorAll('.color-option').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.color === color);
         });
+    },
+
+    // Populate voice settings in profile modal
+    populateVoiceSettings() {
+        const voiceSelect = document.getElementById('voiceSelect');
+        const speedRange = document.getElementById('voiceSpeedRange');
+        const speedValue = document.getElementById('voiceSpeedValue');
+        
+        if (!voiceSelect) return;
+        
+        // Clear existing options (except first)
+        voiceSelect.innerHTML = '<option value="">Tự động chọn tốt nhất</option>';
+        
+        // Get available English voices
+        const voices = Speech.getAvailableVoices();
+        
+        voices.forEach(voice => {
+            const option = document.createElement('option');
+            option.value = voice.name;
+            option.textContent = `${voice.name} (${voice.lang})`;
+            voiceSelect.appendChild(option);
+        });
+        
+        // Set current selected voice
+        const settings = Storage.getSettings();
+        if (settings.selectedVoiceName) {
+            voiceSelect.value = settings.selectedVoiceName;
+        }
+        
+        // Set current speed
+        if (speedRange && speedValue) {
+            const speed = settings.voiceSpeed || 1.0;
+            speedRange.value = speed;
+            speedValue.textContent = speed + 'x';
+        }
     },
 
     // Show toast notification
@@ -501,6 +564,9 @@ const App = {
                 `;
             }
         }
+        
+        // Populate voice settings
+        this.populateVoiceSettings();
         
         // Show modal
         document.getElementById('profileModal').classList.add('active');
@@ -875,6 +941,193 @@ const App = {
             document.body.appendChild(confetti);
             
             setTimeout(() => confetti.remove(), 4000);
+        }
+    },
+    
+    // ========================================
+    // Mobile Bottom Navigation
+    // ========================================
+    
+    // Open More Menu (mobile)
+    openMoreMenu() {
+        const overlay = document.getElementById('moreMenuOverlay');
+        const menu = document.getElementById('moreMenu');
+        
+        if (overlay && menu) {
+            overlay.classList.add('active');
+            menu.classList.add('active');
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
+        }
+    },
+    
+    // Close More Menu
+    closeMoreMenu() {
+        const overlay = document.getElementById('moreMenuOverlay');
+        const menu = document.getElementById('moreMenu');
+        
+        if (overlay && menu) {
+            overlay.classList.remove('active');
+            menu.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    },
+    
+    // Bind Bottom Nav Events
+    bindBottomNavEvents() {
+        // Bottom nav items
+        document.querySelectorAll('.bottom-nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const view = item.dataset.view;
+                
+                // Handle More Menu separately
+                if (view === 'more-menu') {
+                    this.openMoreMenu();
+                    return;
+                }
+                
+                // Update active state
+                document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                // Also update sidebar nav for consistency
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                const sidebarItem = document.querySelector(`.nav-item[data-view="${view}"]`);
+                if (sidebarItem) sidebarItem.classList.add('active');
+                
+                // Clear topic selection
+                Topics.currentTopicId = null;
+                document.querySelectorAll('.topic-item').forEach(t => t.classList.remove('active'));
+                
+                // Show view
+                this.handleNavigation(view);
+            });
+        });
+        
+        // More menu items
+        document.querySelectorAll('.more-menu-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const view = item.dataset.view;
+                if (!view) return; // Skip items with onclick handler
+                
+                this.closeMoreMenu();
+                
+                // Update bottom nav - show More as active when in these views
+                document.querySelectorAll('.bottom-nav-item').forEach(i => i.classList.remove('active'));
+                document.querySelector('.bottom-nav-item[data-view="more-menu"]')?.classList.add('active');
+                
+                // Update sidebar nav
+                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                const sidebarItem = document.querySelector(`.nav-item[data-view="${view}"]`);
+                if (sidebarItem) sidebarItem.classList.add('active');
+                
+                // Show view
+                this.handleNavigation(view);
+            });
+        });
+        
+        // Close more menu overlay
+        const overlay = document.getElementById('moreMenuOverlay');
+        if (overlay) {
+            overlay.addEventListener('click', () => this.closeMoreMenu());
+        }
+        
+        // Close more menu button
+        const closeBtn = document.getElementById('closeMoreMenu');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeMoreMenu());
+        }
+    },
+    
+    // Handle navigation (shared between sidebar and bottom nav)
+    handleNavigation(view) {
+        if (view === 'dashboard') {
+            this.showView('dashboardView');
+            Stats.render();
+        } else if (view === 'topics') {
+            // Mobile topics list view
+            this.showView('topicsListView');
+            Topics.renderTopicsList();
+        } else if (view === 'all-words') {
+            this.showView('allWordsView');
+            Vocabulary.renderAllWords();
+        } else if (view === 'review-due') {
+            this.showView('reviewDueView');
+            Vocabulary.renderDueWords();
+        } else if (view === 'chat') {
+            this.showView('chatView');
+            if (typeof Chat !== 'undefined' && Auth.isLoggedIn()) {
+                Chat.startListening();
+                const onlineCount = document.getElementById('chatOnlineCount');
+                if (onlineCount && typeof Leaderboard !== 'undefined') {
+                    onlineCount.textContent = Leaderboard.getOnlineCount();
+                }
+            }
+        } else if (view === 'admin') {
+            this.showView('adminView');
+            if (typeof Admin !== 'undefined') {
+                Admin.fetchAllUsers().then(() => Admin.renderUsers());
+            }
+        } else if (view === 'inbox') {
+            this.showView('inboxView');
+            if (typeof PrivateChat !== 'undefined') {
+                PrivateChat.fetchConversations().then(() => PrivateChat.renderConversations());
+            }
+        } else if (view === 'challenges') {
+            this.showView('challengesView');
+            if (typeof Challenges !== 'undefined') {
+                Challenges.fetchChallenges().then(() => Challenges.render());
+            }
+        } else if (view === 'explore') {
+            this.showView('exploreView');
+            if (typeof Explore !== 'undefined') {
+                Explore.fetchPublicTopics().then(() => Explore.render());
+            }
+        }
+    },
+    
+    // Update mobile badges
+    updateMobileBadges() {
+        // Sync due badge
+        const dueBadge = document.getElementById('dueBadge');
+        const dueBadgeMobile = document.getElementById('dueBadgeMobile');
+        if (dueBadge && dueBadgeMobile) {
+            dueBadgeMobile.textContent = dueBadge.textContent;
+            dueBadgeMobile.style.display = dueBadge.textContent !== '0' ? 'flex' : 'none';
+        }
+        
+        // Sync challenges badge
+        const challengesBadge = document.getElementById('challengesBadge');
+        const challengesBadgeMobile = document.getElementById('challengesBadgeMobile');
+        if (challengesBadge && challengesBadgeMobile) {
+            challengesBadgeMobile.textContent = challengesBadge.textContent;
+            challengesBadgeMobile.style.display = challengesBadge.style.display;
+        }
+        
+        // Sync chat badge to More menu
+        const chatBadge = document.getElementById('chatBadge');
+        const chatBadgeMobile = document.getElementById('chatBadgeMobile');
+        if (chatBadge && chatBadgeMobile) {
+            chatBadgeMobile.textContent = chatBadge.textContent;
+            chatBadgeMobile.style.display = chatBadge.style.display;
+        }
+        
+        // Sync inbox badge to More menu
+        const inboxBadge = document.getElementById('inboxBadge');
+        const inboxBadgeMobile = document.getElementById('inboxBadgeMobile');
+        if (inboxBadge && inboxBadgeMobile) {
+            inboxBadgeMobile.textContent = inboxBadge.textContent;
+            inboxBadgeMobile.style.display = inboxBadge.style.display;
+        }
+        
+        // Calculate More badge (sum of chat + inbox)
+        const moreBadge = document.getElementById('moreBadge');
+        if (moreBadge) {
+            const chatCount = parseInt(chatBadge?.textContent || '0');
+            const inboxCount = parseInt(inboxBadge?.textContent || '0');
+            const total = chatCount + inboxCount;
+            moreBadge.textContent = total;
+            moreBadge.style.display = total > 0 ? 'flex' : 'none';
         }
     }
 };

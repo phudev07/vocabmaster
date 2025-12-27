@@ -28,24 +28,38 @@ const Speech = {
         
         // Get preferred voice from settings
         const settings = Storage.getSettings();
+        const preferredVoice = settings.selectedVoiceName;
         const preferredType = settings.voiceType || 'US';
         
-        this.selectVoice(preferredType);
+        // If user has selected a specific voice, use that
+        if (preferredVoice) {
+            this.selectedVoice = this.voices.find(v => v.name === preferredVoice);
+        }
+        
+        // Otherwise auto-select best voice
+        if (!this.selectedVoice) {
+            this.selectVoice(preferredType);
+        }
+        
+        console.log('Loaded', this.voices.length, 'voices. Selected:', this.selectedVoice?.name);
     },
 
     selectVoice(type) {
-        // Find English voices with priority
+        // Find English voices
         const englishVoices = this.voices.filter(v => 
             v.lang.startsWith('en')
         );
         
-        // Priority list for better voices
+        // Priority list for better voices (ordered by quality)
         const priorityVoices = [
             // Google voices (usually good quality)
             'Google US English',
             'Google UK English Female',
             'Google UK English Male',
-            // Microsoft voices
+            // Microsoft Azure voices (high quality)
+            'Microsoft Jenny Online',
+            'Microsoft Guy Online',
+            // Microsoft Edge voices
             'Microsoft David',
             'Microsoft Zira',
             'Microsoft Mark',
@@ -53,35 +67,46 @@ const Speech = {
             'Samantha',
             'Daniel',
             'Karen',
-            'Moira'
+            'Moira',
+            'Alex'
         ];
 
+        let candidates = [];
+        
         if (type === 'UK') {
             // Prefer British English
-            this.selectedVoice = englishVoices.find(v => 
-                v.lang === 'en-GB' || v.name.includes('UK') || v.name.includes('British') || v.name.includes('Daniel')
+            candidates = englishVoices.filter(v => 
+                v.lang === 'en-GB' || v.name.includes('UK') || v.name.includes('British')
             );
         } else {
             // Prefer American English
-            this.selectedVoice = englishVoices.find(v => 
+            candidates = englishVoices.filter(v => 
                 v.lang === 'en-US' || v.name.includes('US') || v.name.includes('American')
             );
         }
         
-        // If not found, try priority voices
-        if (!this.selectedVoice) {
-            for (const pv of priorityVoices) {
-                this.selectedVoice = englishVoices.find(v => v.name.includes(pv));
-                if (this.selectedVoice) break;
-            }
+        // Try to find a priority voice among candidates
+        for (const pv of priorityVoices) {
+            this.selectedVoice = candidates.find(v => v.name.includes(pv));
+            if (this.selectedVoice) return;
+        }
+        
+        // Fallback to any matching voice
+        if (candidates.length > 0) {
+            this.selectedVoice = candidates[0];
+            return;
+        }
+
+        // Try any priority voice
+        for (const pv of priorityVoices) {
+            this.selectedVoice = englishVoices.find(v => v.name.includes(pv));
+            if (this.selectedVoice) return;
         }
 
         // Fallback to any English voice
-        if (!this.selectedVoice && englishVoices.length > 0) {
+        if (englishVoices.length > 0) {
             this.selectedVoice = englishVoices[0];
         }
-        
-        console.log('Selected voice:', this.selectedVoice?.name, this.selectedVoice?.lang);
     },
 
     // Speak text
@@ -127,6 +152,15 @@ const Speech = {
     setVoiceType(type) {
         this.selectVoice(type);
         Storage.saveSettings({ voiceType: type });
+    },
+
+    // Set specific voice by name
+    setVoice(voiceName) {
+        const voice = this.voices.find(v => v.name === voiceName);
+        if (voice) {
+            this.selectedVoice = voice;
+            Storage.saveSettings({ selectedVoiceName: voiceName });
+        }
     },
 
     // Get available English voices

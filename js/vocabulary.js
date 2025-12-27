@@ -35,12 +35,17 @@ const Vocabulary = {
         this.renderWordsList(container, words);
     },
 
-    // Render all words
-    renderAllWords() {
+    // Render all words (optionally filtered by topic for mobile pills)
+    renderAllWords(topicId = null) {
         const container = document.getElementById('allWordsList');
-        const words = Storage.getAllWords();
+        let words = Storage.getAllWords();
         
-        this.renderWordsList(container, words);
+        // Filter by topic if specified
+        if (topicId) {
+            words = words.filter(w => w.topicId === topicId);
+        }
+        
+        this.renderWordsList(container, words, !topicId);
     },
 
     // Render due words

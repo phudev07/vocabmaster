@@ -8,7 +8,9 @@ const Topics = {
     // Initialize
     init() {
         this.bindEvents();
+        this.bindMobileTopicBtn();
         this.render();
+        this.renderTopicPills();
     },
 
     // Bind events
@@ -288,8 +290,206 @@ const Topics = {
         }
         
         this.render();
+        this.renderTopicPills();
         Stats.render();
         
         App.showToast('Đã xóa chủ đề', 'success');
+    },
+    
+    // ========================================
+    // Topic Pills (Mobile)
+    // ========================================
+    
+    // Render topic pills for mobile
+    renderTopicPills() {
+        const container = document.getElementById('topicPills');
+        if (!container) return;
+        
+        const topics = Storage.getTopics();
+        
+        // Build pills HTML
+        let html = `
+            <button class="topic-pill ${!this.currentTopicId ? 'active' : ''}" data-topic-id="all">
+                📚 Tất cả
+            </button>
+        `;
+        
+        topics.forEach(topic => {
+            const wordCount = Storage.getWordCountByTopic(topic.id);
+            const isActive = this.currentTopicId === topic.id;
+            
+            html += `
+                <button class="topic-pill ${isActive ? 'active' : ''}" data-topic-id="${topic.id}">
+                    <span class="topic-pill-color" style="background: ${topic.color}"></span>
+                    ${topic.icon} ${topic.name}
+                    <span class="topic-pill-count">(${wordCount})</span>
+                </button>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+        // Bind click events
+        container.querySelectorAll('.topic-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                const topicId = pill.dataset.topicId;
+                
+                // Update active state
+                container.querySelectorAll('.topic-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                
+                if (topicId === 'all') {
+                    // Show all words
+                    this.currentTopicId = null;
+                    Vocabulary.renderAllWords();
+                } else {
+                    // Filter by topic
+                    this.currentTopicId = topicId;
+                    Vocabulary.renderAllWords(topicId);
+                }
+            });
+        });
+    },
+    
+    // Bind mobile topic add button
+    bindMobileTopicBtn() {
+        const addBtnMobile = document.getElementById('addTopicBtnMobile');
+        if (addBtnMobile) {
+            addBtnMobile.addEventListener('click', () => {
+                this.openModal();
+            });
+        }
+        
+        // Also bind the add button in topics list view
+        const addBtnList = document.getElementById('addTopicBtnList');
+        if (addBtnList) {
+            addBtnList.addEventListener('click', () => {
+                this.openModal();
+            });
+        }
+    },
+    
+    // Render topics as simple list (for mobile topicsListView)
+    renderTopicsList() {
+        const container = document.getElementById('topicsList2');
+        if (!container) return;
+        
+        const topics = Storage.getTopics();
+        
+        if (topics.length === 0) {
+            container.innerHTML = `
+                <div class="topics-empty">
+                    <div class="topics-empty-icon">📚</div>
+                    <h3>Chưa có chủ đề nào</h3>
+                    <p>Tạo chủ đề đầu tiên để bắt đầu học từ vựng!</p>
+                    <button class="btn btn-primary" onclick="Topics.openModal()">+ Tạo chủ đề</button>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = topics.map(topic => {
+            const wordCount = Storage.getWordCountByTopic(topic.id);
+            
+            return `
+                <div class="topic-list-item" data-topic-id="${topic.id}">
+                    <div class="topic-list-header">
+                        <div class="topic-list-color-bar" style="background: ${topic.color}"></div>
+                        <span class="topic-list-icon">${topic.icon}</span>
+                        <div class="topic-list-info">
+                            <div class="topic-list-name">${topic.name}</div>
+                            <div class="topic-list-count">${wordCount} từ</div>
+                        </div>
+                        <span class="topic-list-arrow">›</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Bind click and long press events
+        container.querySelectorAll('.topic-list-item').forEach(item => {
+            const topicId = item.dataset.topicId;
+            let pressTimer = null;
+            let isLongPress = false;
+            
+            // Click to enter topic
+            item.addEventListener('click', () => {
+                if (!isLongPress) {
+                    this.selectTopic(topicId);
+                }
+                isLongPress = false;
+            });
+            
+            // Long press to show edit/delete options
+            item.addEventListener('touchstart', (e) => {
+                isLongPress = false;
+                pressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    // Vibrate if supported
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                    // Show context menu
+                    this.showTopicContextMenu(topicId, e.touches[0].clientX, e.touches[0].clientY);
+                }, 500);
+            }, { passive: true });
+            
+            item.addEventListener('touchend', () => {
+                clearTimeout(pressTimer);
+            });
+            
+            item.addEventListener('touchmove', () => {
+                clearTimeout(pressTimer);
+            });
+        });
+    },
+    
+    // Show context menu for topic (edit/delete)
+    showTopicContextMenu(topicId, x, y) {
+        // Remove existing menu
+        const existingMenu = document.getElementById('topicContextMenu');
+        if (existingMenu) existingMenu.remove();
+        
+        const topic = Storage.getTopicById(topicId);
+        if (!topic) return;
+        
+        const menu = document.createElement('div');
+        menu.id = 'topicContextMenu';
+        menu.className = 'context-menu';
+        menu.innerHTML = `
+            <div class="context-menu-header">${topic.icon} ${topic.name}</div>
+            <button class="context-menu-item" onclick="Topics.openModal('${topicId}'); Topics.hideContextMenu();">
+                <span>✏️</span> Sửa chủ đề
+            </button>
+            <button class="context-menu-item danger" onclick="Topics.confirmDelete('${topicId}'); Topics.hideContextMenu();">
+                <span>🗑️</span> Xóa chủ đề
+            </button>
+        `;
+        
+        document.body.appendChild(menu);
+        
+        // Position menu
+        const menuRect = menu.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        
+        // Center horizontally, position from touch point
+        menu.style.left = '50%';
+        menu.style.transform = 'translateX(-50%)';
+        menu.style.bottom = '100px';
+        
+        // Add overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'topicContextOverlay';
+        overlay.className = 'context-menu-overlay';
+        overlay.onclick = () => this.hideContextMenu();
+        document.body.insertBefore(overlay, menu);
+    },
+    
+    // Hide context menu
+    hideContextMenu() {
+        const menu = document.getElementById('topicContextMenu');
+        const overlay = document.getElementById('topicContextOverlay');
+        if (menu) menu.remove();
+        if (overlay) overlay.remove();
     }
 };

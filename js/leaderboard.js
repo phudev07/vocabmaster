@@ -370,6 +370,9 @@ const Leaderboard = {
         
         document.body.appendChild(modal);
         
+        // Set z-index lower than viewUserModal so user profile appears on top
+        modal.style.zIndex = '1500';
+        
         // Close handlers
         modal.querySelector('.modal-overlay').addEventListener('click', () => modal.remove());
         modal.querySelector('.modal-close').addEventListener('click', () => modal.remove());

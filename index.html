@@ -482,6 +482,19 @@
             </div>
         </section>
 
+        <!-- Topics List View (Mobile) -->
+        <section class="view" id="topicsListView">
+            <div class="view-header">
+                <h1>📚 Chủ đề của tôi</h1>
+                <button class="btn btn-primary" id="addTopicBtnList">
+                    <span>+</span> Thêm
+                </button>
+            </div>
+            <div class="topics-list-mobile" id="topicsList2">
+                <!-- Topics will be rendered here as list items -->
+            </div>
+        </section>
+
         <!-- Chat View -->
         <section class="view" id="chatView">
             <div class="view-header">
@@ -621,6 +634,16 @@
                     </button>
                 </div>
             </div>
+            
+            <!-- Topic Pills (Mobile) -->
+            <div class="topic-pills-container" id="topicPillsContainer">
+                <div class="topic-pills" id="topicPills">
+                    <button class="topic-pill active" data-topic-id="all">📚 Tất cả</button>
+                    <!-- Topic pills will be rendered by JS -->
+                </div>
+                <button class="btn btn-icon topic-add-btn" id="addTopicBtnMobile" title="Thêm chủ đề">➕</button>
+            </div>
+            
             <div class="search-bar">
                 <input type="text" id="searchInput" placeholder="Tìm kiếm từ vựng...">
             </div>
@@ -714,6 +737,67 @@
             </div>
         </section>
     </main>
+
+    <!-- Bottom Tab Bar (Mobile) -->
+    <nav class="bottom-nav" id="bottomNav">
+        <button class="bottom-nav-item active" data-view="dashboard">
+            <span class="bottom-nav-icon">📊</span>
+            <span class="bottom-nav-label">Home</span>
+        </button>
+        <button class="bottom-nav-item" data-view="topics">
+            <span class="bottom-nav-icon">📖</span>
+            <span class="bottom-nav-label">Chủ đề</span>
+        </button>
+        <button class="bottom-nav-item" data-view="review-due">
+            <span class="bottom-nav-icon">🎯</span>
+            <span class="bottom-nav-label">Ôn tập</span>
+            <span class="bottom-nav-badge" id="dueBadgeMobile" style="display: none;">0</span>
+        </button>
+        <button class="bottom-nav-item" data-view="challenges">
+            <span class="bottom-nav-icon">🏆</span>
+            <span class="bottom-nav-label">Thách đấu</span>
+            <span class="bottom-nav-badge" id="challengesBadgeMobile" style="display: none;">0</span>
+        </button>
+        <button class="bottom-nav-item" data-view="more-menu">
+            <span class="bottom-nav-icon">⚙️</span>
+            <span class="bottom-nav-label">Thêm</span>
+            <span class="bottom-nav-badge" id="moreBadge" style="display: none;">0</span>
+        </button>
+    </nav>
+
+    <!-- More Menu (Mobile) -->
+    <div class="more-menu-overlay" id="moreMenuOverlay"></div>
+    <div class="more-menu" id="moreMenu">
+        <div class="more-menu-header">
+            <h3>Menu</h3>
+            <button class="btn-icon" id="closeMoreMenu">✕</button>
+        </div>
+        <div class="more-menu-items">
+            <button class="more-menu-item" data-view="all-words">
+                <span class="more-menu-icon">📖</span>
+                <span class="more-menu-text">Tất cả từ vựng</span>
+            </button>
+            <button class="more-menu-item" data-view="chat">
+                <span class="more-menu-icon">💬</span>
+                <span class="more-menu-text">Chat cộng đồng</span>
+                <span class="more-menu-badge" id="chatBadgeMobile" style="display: none;">0</span>
+            </button>
+            <button class="more-menu-item" data-view="inbox">
+                <span class="more-menu-icon">📬</span>
+                <span class="more-menu-text">Tin nhắn riêng</span>
+                <span class="more-menu-badge" id="inboxBadgeMobile" style="display: none;">0</span>
+            </button>
+            <button class="more-menu-item" data-view="explore">
+                <span class="more-menu-icon">🔍</span>
+                <span class="more-menu-text">Khám phá</span>
+            </button>
+            <div class="more-menu-divider"></div>
+            <button class="more-menu-item" onclick="App.showProfileModal(); App.closeMoreMenu();">
+                <span class="more-menu-icon">⚙️</span>
+                <span class="more-menu-text">Cài đặt</span>
+            </button>
+        </div>
+    </div>
 
     <!-- Modal: Add/Edit Topic -->
     <div class="modal" id="topicModal">
@@ -814,6 +898,40 @@
                         <button type="button" class="icon-option" data-icon="🔑">🔑</button>
                         <button type="button" class="icon-option" data-icon="💎">💎</button>
                         <button type="button" class="icon-option" data-icon="🎯">🎯</button>
+                        <!-- Awards & Badges -->
+                        <button type="button" class="icon-option" data-icon="🏆">🏆</button>
+                        <button type="button" class="icon-option" data-icon="🥇">🥇</button>
+                        <button type="button" class="icon-option" data-icon="🥈">🥈</button>
+                        <button type="button" class="icon-option" data-icon="🥉">🥉</button>
+                        <button type="button" class="icon-option" data-icon="🏅">🏅</button>
+                        <button type="button" class="icon-option" data-icon="🎖️">🎖️</button>
+                        <button type="button" class="icon-option" data-icon="👑">👑</button>
+                        <button type="button" class="icon-option" data-icon="💫">💫</button>
+                        <button type="button" class="icon-option" data-icon="✨">✨</button>
+                        <button type="button" class="icon-option" data-icon="🌟">🌟</button>
+                        <!-- Clothing & Objects -->
+                        <button type="button" class="icon-option" data-icon="👕">👕</button>
+                        <button type="button" class="icon-option" data-icon="👖">👖</button>
+                        <button type="button" class="icon-option" data-icon="👗">👗</button>
+                        <button type="button" class="icon-option" data-icon="👞">👞</button>
+                        <button type="button" class="icon-option" data-icon="👒">👒</button>
+                        <button type="button" class="icon-option" data-icon="👜">👜</button>
+                        <button type="button" class="icon-option" data-icon="🎒">🎒</button>
+                        <!-- Furniture & Tools -->
+                        <button type="button" class="icon-option" data-icon="🛋️">🛋️</button>
+                        <button type="button" class="icon-option" data-icon="🛏️">🛏️</button>
+                        <button type="button" class="icon-option" data-icon="🪑">🪑</button>
+                        <button type="button" class="icon-option" data-icon="🚪">🚪</button>
+                        <button type="button" class="icon-option" data-icon="🔨">🔨</button>
+                        <button type="button" class="icon-option" data-icon="🪥">🪥</button>
+                        <!-- Emotions & People -->
+                        <button type="button" class="icon-option" data-icon="😀">😀</button>
+                        <button type="button" class="icon-option" data-icon="😊">😊</button>
+                        <button type="button" class="icon-option" data-icon="🤔">🤔</button>
+                        <button type="button" class="icon-option" data-icon="😎">😎</button>
+                        <button type="button" class="icon-option" data-icon="🧑‍💻">🧑‍💻</button>
+                        <button type="button" class="icon-option" data-icon="👨‍🎓">👨‍🎓</button>
+                        <button type="button" class="icon-option" data-icon="👩‍🏫">👩‍🏫</button>
                     </div>
                 </div>
                 <div class="form-group">
@@ -1205,6 +1323,54 @@
                     <div class="badges-grid" id="profileBadges">
                         <!-- Badges will be rendered here -->
                     </div>
+                </div>
+                
+                <!-- Voice Settings -->
+                <div class="profile-section">
+                    <h4>🔊 Giọng đọc</h4>
+                    <div class="voice-settings">
+                        <div class="form-group">
+                            <label>Chọn giọng:</label>
+                            <select id="voiceSelect" class="form-select" onchange="Speech.setVoice(this.value)">
+                                <option value="">Tự động chọn tốt nhất</option>
+                                <!-- Voices will be populated by JS -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tốc độ đọc:</label>
+                            <div class="speed-control">
+                                <input type="range" id="voiceSpeedRange" min="0.5" max="2" step="0.1" value="1" 
+                                       onchange="Speech.setRate(parseFloat(this.value)); document.getElementById('voiceSpeedValue').textContent = this.value + 'x'">
+                                <span id="voiceSpeedValue">1x</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="Speech.speak('Hello, this is a test of the selected voice.')">
+                            🔊 Test giọng đọc
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Theme Mode (Light/Dark) -->
+                <div class="profile-section">
+                    <h4>🌗 Chế độ hiển thị</h4>
+                    <div class="theme-mode-toggle">
+                        <button class="theme-mode-btn" data-theme="light" onclick="App.setThemeMode('light')">
+                            <span>☀️</span>
+                            <span>Sáng</span>
+                        </button>
+                        <button class="theme-mode-btn active" data-theme="dark" onclick="App.setThemeMode('dark')">
+                            <span>🌙</span>
+                            <span>Tối</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Sync Button -->
+                <div class="profile-section">
+                    <h4>☁️ Đồng bộ dữ liệu</h4>
+                    <button class="btn btn-secondary btn-block" id="syncBtnProfile" onclick="App.syncData()">
+                        ☁️ Đồng bộ ngay
+                    </button>
                 </div>
                 
                 <!-- Theme Colors -->
