@@ -3941,7 +3941,6 @@ body {
     .private-form {
         flex-shrink: 0;
         padding: 0.75rem;
-        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
         background: var(--bg-secondary);
     }
     
@@ -6271,7 +6270,7 @@ body {
     }
     
     .private-form {
-        padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
+        padding-bottom: 0.75rem;
     }
     
     /* Inbox view */
