@@ -277,10 +277,18 @@ const Review = {
         const title = document.getElementById('configModalTitle');
         const totalCount = document.getElementById('totalWordsCount');
         const modeInput = document.getElementById('configMode');
+        const testModeTypeGroup = document.getElementById('testModeTypeGroup');
 
         title.textContent = mode === 'review' ? 'Cấu hình ôn tập' : 'Cấu hình kiểm tra';
         totalCount.textContent = words.length;
         modeInput.value = mode;
+
+        // Show/hide test mode type selection
+        if (testModeTypeGroup) {
+            testModeTypeGroup.style.display = mode === 'test' ? 'block' : 'none';
+            // Reset to normal mode
+            document.querySelector('input[name="testModeType"][value="normal"]').checked = true;
+        }
 
         this.pendingWords = words;
 
@@ -296,6 +304,7 @@ const Review = {
         const countType = document.querySelector('input[name="count"]:checked').value;
         const randomCount = parseInt(document.getElementById('randomCount').value) || 10;
         const mode = document.getElementById('configMode').value;
+        const testModeType = document.querySelector('input[name="testModeType"]:checked')?.value || 'normal';
 
         let words = this.pendingWords || [];
 
@@ -308,7 +317,12 @@ const Review = {
         if (mode === 'review') {
             this.start(words);
         } else {
-            Test.start(words);
+            // Test mode
+            if (testModeType === 'listening') {
+                Test.startListening(words);
+            } else {
+                Test.start(words);
+            }
         }
     }
 };

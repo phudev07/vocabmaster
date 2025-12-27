@@ -700,7 +700,25 @@
                     <button class="btn-icon" id="closeTestBtn" aria-label="Đóng">✕</button>
                 </div>
                 <div class="test-card">
-                    <p class="test-meaning" id="testMeaning">Nghĩa tiếng Việt</p>
+                    <!-- Meaning area - used for both modes -->
+                    <div class="test-meaning-area">
+                        <!-- Normal mode: Show Vietnamese meaning directly -->
+                        <p class="test-meaning" id="testMeaning">Nghĩa tiếng Việt</p>
+                        
+                        <!-- Listening mode: Show placeholder, reveal on hint click -->
+                        <p class="test-meaning-hidden" id="testMeaningHidden" style="display: none;">Nhấn 💡 để xem nghĩa</p>
+                    </div>
+                    
+                    <!-- Listening mode controls: Speaker + Hint buttons -->
+                    <div class="listening-controls-row" id="listeningControlsRow" style="display: none;">
+                        <button class="listen-speaker-btn" id="testSpeakerBtn" title="Phát âm">
+                            🔊 <span class="listen-speed" id="speakerSpeedLabel">1x</span>
+                        </button>
+                        <button class="listen-hint-btn" id="testHintBtn" title="Xem nghĩa">
+                            💡
+                        </button>
+                    </div>
+                    
                     <input type="text" class="test-input" id="testInput" placeholder="Nhập từ tiếng Anh..." autocomplete="off">
                     <div class="test-feedback" id="testFeedback"></div>
                 </div>
@@ -1093,6 +1111,22 @@
                     </div>
                 </div>
                 <input type="hidden" id="configMode">
+                
+                <!-- Test Mode Type (only shown for test mode) -->
+                <div class="form-group" id="testModeTypeGroup" style="display: none;">
+                    <label>Chế độ kiểm tra</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="testModeType" value="normal" checked>
+                            <span>📝 Thường (hiện nghĩa tiếng Việt)</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="testModeType" value="listening">
+                            <span>🔊 Nghe (ẩn nghĩa, chỉ nghe phát âm)</span>
+                        </label>
+                    </div>
+                </div>
+                
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary modal-close">Hủy</button>
                     <button type="submit" class="btn btn-primary">Bắt đầu</button>

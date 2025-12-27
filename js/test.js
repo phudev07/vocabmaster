@@ -1,5 +1,5 @@
 /**
- * Test Module - Spelling test mode
+ * Test Module - Spelling test mode with Listening mode support
  */
 
 const Test = {
@@ -8,14 +8,19 @@ const Test = {
     correctCount: 0,
     wrongWords: [],
     isAnswered: false,
+    
+    // Listening mode properties
+    listeningMode: false,
+    speakClickCount: 0, // 0=not played, 1=normal, 2=slow, 3=normal, etc.
 
-    // Start test with words
+    // Start test with words (normal mode)
     start(words) {
         if (!words || words.length === 0) {
             App.showToast('Không có từ nào để kiểm tra', 'warning');
             return;
         }
 
+        this.listeningMode = false;
         this.words = this.shuffle([...words]);
         this.currentIndex = 0;
         this.correctCount = 0;
@@ -25,6 +30,68 @@ const Test = {
         this.render();
         App.showView('testView');
     },
+    
+    // Start listening test (hide Vietnamese, use audio)
+    startListening(words) {
+        if (!words || words.length === 0) {
+            App.showToast('Không có từ nào để kiểm tra', 'warning');
+            return;
+        }
+
+        this.listeningMode = true;
+        this.words = this.shuffle([...words]);
+        this.currentIndex = 0;
+        this.correctCount = 0;
+        this.wrongWords = [];
+        this.isAnswered = false;
+        this.speakClickCount = 0;
+
+        this.render();
+        App.showView('testView');
+        
+        // Auto play first word
+        setTimeout(() => this.speakCurrentWord(), 500);
+    },
+    
+    // Speak current word with speed toggle
+    speakCurrentWord() {
+        const word = this.words[this.currentIndex];
+        if (!word) return;
+        
+        this.speakClickCount++;
+        
+        // Determine speed: odd clicks = normal (1x), even clicks = slow (0.7x)
+        const isSlowSpeed = this.speakClickCount % 2 === 0;
+        const speedLabel = document.getElementById('speakerSpeedLabel');
+        
+        if (isSlowSpeed) {
+            Speech.rate = 0.7;
+            if (speedLabel) speedLabel.textContent = '0.7x';
+        } else {
+            Speech.rate = 1.0;
+            if (speedLabel) speedLabel.textContent = '1x';
+        }
+        
+        Speech.speak(word.english);
+    },
+    
+    // Show hint (Vietnamese meaning) - reveal in same area
+    showHint() {
+        const word = this.words[this.currentIndex];
+        if (!word) return;
+        
+        const hintEl = document.getElementById('testMeaningHidden');
+        const hintBtn = document.getElementById('testHintBtn');
+        
+        if (hintEl) {
+            hintEl.textContent = word.vietnamese;
+            hintEl.style.color = 'var(--accent-warning)';
+        }
+        if (hintBtn) {
+            hintBtn.classList.add('revealed');
+        }
+    },
+
 
     // Challenge mode callback
     challengeCallback: null,
@@ -67,7 +134,33 @@ const Test = {
         document.getElementById('testScore').textContent = 
             `Đúng: ${this.correctCount}`;
         
-        document.getElementById('testMeaning').textContent = word.vietnamese;
+        // Toggle between normal mode and listening mode
+        const testMeaning = document.getElementById('testMeaning');
+        const testMeaningHidden = document.getElementById('testMeaningHidden');
+        const listeningControls = document.getElementById('listeningControlsRow');
+        const hintBtn = document.getElementById('testHintBtn');
+        
+        if (this.listeningMode) {
+            // Listening mode: hide Vietnamese, show placeholder + controls
+            testMeaning.style.display = 'none';
+            if (testMeaningHidden) {
+                testMeaningHidden.style.display = 'block';
+                testMeaningHidden.textContent = 'Nhấn 💡 để xem nghĩa';
+            }
+            if (listeningControls) listeningControls.style.display = 'flex';
+            if (hintBtn) hintBtn.classList.remove('revealed');
+            
+            // Reset speak counter for new word
+            this.speakClickCount = 0;
+            const speedLabel = document.getElementById('speakerSpeedLabel');
+            if (speedLabel) speedLabel.textContent = '1x';
+        } else {
+            // Normal mode: show Vietnamese meaning
+            testMeaning.style.display = 'block';
+            testMeaning.textContent = word.vietnamese;
+            if (testMeaningHidden) testMeaningHidden.style.display = 'none';
+            if (listeningControls) listeningControls.style.display = 'none';
+        }
         
         const input = document.getElementById('testInput');
         input.value = '';
@@ -235,6 +328,18 @@ const Test = {
                 this.checkAnswer();
             }
         });
+
+        // Listening mode: Speaker button
+        const speakerBtn = document.getElementById('testSpeakerBtn');
+        if (speakerBtn) {
+            speakerBtn.addEventListener('click', () => this.speakCurrentWord());
+        }
+        
+        // Listening mode: Hint button
+        const hintBtn = document.getElementById('testHintBtn');
+        if (hintBtn) {
+            hintBtn.addEventListener('click', () => this.showHint());
+        }
 
         // Test buttons from views
         document.getElementById('testTopicBtn').addEventListener('click', () => {

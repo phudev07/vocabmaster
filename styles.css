@@ -888,6 +888,246 @@ body {
     color: var(--text-primary);
 }
 
+/* Listening Mode Controls */
+.listening-mode-controls {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.speaker-btn {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary, #818cf8));
+    border: none;
+    font-size: 2.5rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    color: white;
+    transition: all 0.2s ease;
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+}
+
+.speaker-btn:hover {
+    transform: scale(1.05);
+}
+
+.speaker-btn:active {
+    transform: scale(0.95);
+}
+
+.speaker-speed {
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.hint-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.hint-btn:hover {
+    background: var(--accent-warning);
+    border-color: var(--accent-warning);
+}
+
+.hint-btn:active {
+    transform: scale(0.95);
+}
+
+.hint-btn.revealed {
+    background: var(--accent-warning);
+    border-color: var(--accent-warning);
+}
+
+.test-hint {
+    font-size: 1.25rem;
+    color: var(--accent-warning);
+    margin-bottom: 1.5rem;
+    padding: 0.75rem;
+    background: rgba(245, 158, 11, 0.1);
+    border-radius: var(--radius-md);
+}
+
+/* Responsive for mobile */
+@media (max-width: 768px) {
+    /* Fix test container - prevent ALL scrolling, avoid header/bottom nav */
+    #testView {
+        position: fixed;
+        top: var(--header-height, 60px);
+        left: 0;
+        right: 0;
+        bottom: calc(70px + env(safe-area-inset-bottom));
+        overflow: hidden;
+        touch-action: none;
+        z-index: 50;
+    }
+    
+    .test-container {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        touch-action: manipulation;
+    }
+    
+    .test-card {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
+    }
+    
+    /* Meaning area - fixed height for both modes */
+    .test-meaning-area {
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+    
+    .test-meaning-hidden {
+        font-size: 0.9rem;
+        color: var(--text-muted);
+        text-align: center;
+        white-space: nowrap;
+    }
+    
+    /* Listening controls row */
+    .listening-controls-row {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .listen-speaker-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        background: var(--accent-primary);
+        color: white;
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: 1rem;
+        cursor: pointer;
+    }
+    
+    .listen-speaker-btn:active {
+        transform: scale(0.95);
+    }
+    
+    .listen-speed {
+        font-size: 0.8rem;
+        opacity: 0.9;
+    }
+    
+    .listen-hint-btn {
+        padding: 0.75rem 1rem;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        font-size: 1rem;
+        cursor: pointer;
+    }
+    
+    .listen-hint-btn:active {
+        transform: scale(0.95);
+    }
+    
+    .listen-hint-btn.revealed {
+        background: var(--accent-warning);
+        border-color: var(--accent-warning);
+    }
+}
+
+/* Desktop listening mode styles */
+.listening-controls-row {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.listen-speaker-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.listen-speaker-btn:hover {
+    transform: scale(1.02);
+}
+
+.listen-speed {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+.listen-hint-btn {
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.listen-hint-btn:hover {
+    background: var(--accent-warning);
+    border-color: var(--accent-warning);
+}
+
+.listen-hint-btn.revealed {
+    background: var(--accent-warning);
+    border-color: var(--accent-warning);
+}
+
+.test-meaning-area {
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.test-meaning-hidden {
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+
 .test-input {
     width: 100%;
     padding: 1rem;
@@ -4587,6 +4827,25 @@ body {
         overflow-y: auto;
         padding: 1rem;
         -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Config modal form scrollable on mobile */
+    #configModal .modal-content form {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 1rem;
+        padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+    }
+    
+    #configModal .form-actions {
+        flex-shrink: 0;
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+        background: var(--bg-secondary);
     }
     
     .modal-footer, .form-actions {
