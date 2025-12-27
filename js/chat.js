@@ -197,7 +197,7 @@ const Chat = {
                     messageContent = `
                         <div class="topic-share-card">
                             <div class="topic-share-header">
-                                <span class="topic-share-icon">${topicData.topicIcon}</span>
+                                <span class="topic-share-icon">${this.escapeHtml(topicData.topicIcon)}</span>
                                 <div>
                                     <strong>${this.escapeHtml(topicData.topicName)}</strong>
                                     <span class="topic-share-count">${topicData.wordsCount} từ</span>

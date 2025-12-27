@@ -830,7 +830,7 @@ const App = {
             
             // Populate user profile modal
             document.getElementById('viewUserAvatar').src = user.photoURL || '';
-            document.getElementById('viewUserName').innerHTML = (user.displayName || 'Unknown') + badgeHtml;
+            document.getElementById('viewUserName').innerHTML = Security.sanitizeText(user.displayName || 'Unknown', 50) + badgeHtml;
             document.getElementById('viewUserXP').textContent = user.xp || 0;
             document.getElementById('viewUserStreak').textContent = user.streak || 0;
             document.getElementById('viewUserWords').textContent = user.totalWords || 0;
