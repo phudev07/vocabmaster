@@ -3909,9 +3909,13 @@ body {
     
     #privateChatView.active {
         display: flex;
+        overscroll-behavior: none;
     }
     
     .private-chat-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
         flex-shrink: 0;
         margin: 0;
         padding: 0.75rem 1rem;
@@ -3979,9 +3983,13 @@ body {
     
     #privateChatView.active {
         display: flex;
+        overscroll-behavior: none;
     }
     
     .private-chat-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
         flex-shrink: 0;
         display: flex;
         align-items: center;
