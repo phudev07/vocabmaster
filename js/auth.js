@@ -70,21 +70,70 @@ const Auth = {
                         console.log('User signed in:', user.displayName);
                         // Sync data for this user
                         FirebaseDB.setUserId(user.uid);
-                        FirebaseDB.syncFromCloud().then(() => {
+                        FirebaseDB.syncFromCloud().then(async () => {
                             FirebaseDB.startRealtimeSync();
                             // Check if streak should be reset (user missed days)
                             Stats.checkStreakOnLoad();
                             Stats.render();
                             Topics.render();
                             
-                            // Show notification permission prompt
+                            // Initialize notifications and sync player ID (CRITICAL for iOS)
                             if (typeof Notifications !== 'undefined') {
+                                await Notifications.init();
+                                
+                                // Sync player ID to Firebase when user logs in
+                                // This ensures iOS users get notifications
+                                try {
+                                    let playerId = null;
+                                    if (window.OneSignal && window.OneSignal.User) {
+                                        const isSubscribed = await window.OneSignal.User.PushSubscription.optedIn;
+                                        if (isSubscribed) {
+                                            playerId = await window.OneSignal.User.PushSubscription.id;
+                                        }
+                                    } else if (window.OneSignalDeferred) {
+                                        await new Promise((resolve) => {
+                                            window.OneSignalDeferred.push(async (OneSignal) => {
+                                                try {
+                                                    const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
+                                                    if (isSubscribed) {
+                                                        playerId = await OneSignal.User.PushSubscription.id;
+                                                    }
+                                                } catch (e) {
+                                                    console.log('Could not get player ID on login:', e);
+                                                }
+                                                resolve();
+                                            });
+                                        });
+                                    }
+                                    
+                                    if (playerId && FirebaseDB.initialized) {
+                                        const settings = Storage.getSettings();
+                                        await FirebaseDB.saveReminderSettings(
+                                            settings.reminderEnabled !== false,
+                                            settings.reminderTime || '20:00',
+                                            playerId
+                                        );
+                                        console.log('Player ID synced on login:', playerId);
+                                    }
+                                    
+                                    // Tag user and update reminder tags
+                                    await Notifications.tagUser();
+                                    await Notifications.updateReminderTag();
+                                } catch (e) {
+                                    console.error('Error syncing player ID on login:', e);
+                                }
+                                
+                                // Show notification permission prompt
                                 Notifications.checkAndPrompt();
                             }
                         });
                     } else {
                         console.log('User signed out');
                         FirebaseDB.setUserId(null);
+                        // Stop real-time sync
+                        if (FirebaseDB.stopRealtimeSync) {
+                            FirebaseDB.stopRealtimeSync();
+                        }
                     }
                     
                     resolve(user);

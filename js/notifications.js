@@ -25,14 +25,30 @@ const Notifications = {
             this.initialized = true;
             
             // Listen for subscription changes
-            window.OneSignal.User.PushSubscription.addEventListener('change', (event) => {
+            window.OneSignal.User.PushSubscription.addEventListener('change', async (event) => {
                 console.log('Push subscription changed:', event.current);
                 if (event.current.optedIn) {
                     localStorage.setItem('vocabmaster_notif_subscribed', 'true');
                     // Tag user when subscribed
                     if (Auth.isLoggedIn()) {
-                        this.tagUser();
-                        this.updateReminderTag(); // Sync reminder tags too
+                        await this.tagUser();
+                        await this.updateReminderTag(); // Sync reminder tags too
+                        
+                        // CRITICAL: Update player ID in Firebase for iOS support
+                        try {
+                            const playerId = await window.OneSignal.User.PushSubscription.id;
+                            if (playerId && FirebaseDB.initialized) {
+                                const settings = Storage.getSettings();
+                                await FirebaseDB.saveReminderSettings(
+                                    settings.reminderEnabled !== false,
+                                    settings.reminderTime || '20:00',
+                                    playerId
+                                );
+                                console.log('Player ID synced to Firebase:', playerId);
+                            }
+                        } catch (e) {
+                            console.error('Error syncing player ID:', e);
+                        }
                     }
                 }
             });
@@ -107,17 +123,45 @@ const Notifications = {
     
     // Tag user with Firebase UID for targeting
     async tagUser() {
-        if (!window.OneSignal || !Auth.isLoggedIn()) return;
+        if (!Auth.isLoggedIn()) return;
         
-        try {
-            await window.OneSignal.User.addTags({
-                firebase_uid: Auth.user.uid,
-                user_name: Auth.user.displayName || 'User',
-                user_email: Auth.user.email || ''
-            });
-            console.log('User tagged with Firebase UID');
-        } catch (error) {
-            console.error('Error tagging user:', error);
+        const tagUserTags = async (OneSignal) => {
+            try {
+                await OneSignal.User.addTags({
+                    firebase_uid: Auth.user.uid,
+                    user_name: Auth.user.displayName || 'User',
+                    user_email: Auth.user.email || ''
+                });
+                console.log('User tagged with Firebase UID');
+                
+                // Also sync player ID to Firebase when tagging
+                try {
+                    const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
+                    if (isSubscribed) {
+                        const playerId = await OneSignal.User.PushSubscription.id;
+                        if (playerId && FirebaseDB.initialized) {
+                            const settings = Storage.getSettings();
+                            await FirebaseDB.saveReminderSettings(
+                                settings.reminderEnabled !== false,
+                                settings.reminderTime || '20:00',
+                                playerId
+                            );
+                            console.log('Player ID synced during tag:', playerId);
+                        }
+                    }
+                } catch (e) {
+                    console.log('Could not sync player ID during tag:', e);
+                }
+            } catch (error) {
+                console.error('Error tagging user:', error);
+            }
+        };
+        
+        // Try direct call first, fallback to deferred
+        if (window.OneSignal && window.OneSignal.User) {
+            await tagUserTags(window.OneSignal);
+        } else if (window.OneSignalDeferred) {
+            window.OneSignalDeferred.push(tagUserTags);
         }
     },
     
@@ -334,27 +378,54 @@ const Notifications = {
         }
         
         // Save to Firebase (works on all devices including iOS)
-        if (typeof FirebaseDB !== 'undefined' && FirebaseDB.initialized) {
-            // Get OneSignal player ID if available
+        if (typeof FirebaseDB !== 'undefined' && FirebaseDB.initialized && Auth.isLoggedIn()) {
+            // Get OneSignal player ID if available - CRITICAL for iOS
             let playerId = null;
             try {
+                // Wait for OneSignal to be ready (especially important for iOS)
                 if (window.OneSignal && window.OneSignal.User) {
-                    const id = await window.OneSignal.User.PushSubscription.id;
-                    playerId = id || null;
+                    // Check if subscribed first
+                    const isSubscribed = await window.OneSignal.User.PushSubscription.optedIn;
+                    if (isSubscribed) {
+                        const id = await window.OneSignal.User.PushSubscription.id;
+                        playerId = id || null;
+                        console.log('OneSignal player ID retrieved:', playerId);
+                    } else {
+                        console.log('User not subscribed to OneSignal');
+                    }
+                } else if (window.OneSignalDeferred) {
+                    // Use deferred pattern for mobile/iOS
+                    await new Promise((resolve) => {
+                        window.OneSignalDeferred.push(async (OneSignal) => {
+                            try {
+                                const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
+                                if (isSubscribed) {
+                                    playerId = await OneSignal.User.PushSubscription.id;
+                                    console.log('OneSignal player ID (deferred):', playerId);
+                                }
+                            } catch (e) {
+                                console.log('Could not get player ID (deferred):', e);
+                            }
+                            resolve();
+                        });
+                    });
                 }
             } catch (e) {
-                console.log('Could not get OneSignal player ID');
+                console.error('Error getting OneSignal player ID:', e);
             }
             
+            // Save to Firebase with player ID
             const saved = await FirebaseDB.saveReminderSettings(enabled, time, playerId);
             if (saved) {
-                console.log('Reminder saved to Firebase');
+                console.log('Reminder saved to Firebase with player ID:', playerId);
                 App.showToast(`🔔 Đã lưu nhắc nhở lúc ${time}`, 'success');
+            } else {
+                console.warn('Failed to save reminder to Firebase');
             }
         }
         
         // Also try OneSignal tags (works on desktop/Android)
-        this.updateReminderTag();
+        await this.updateReminderTag();
         
         console.log('Reminder settings saved:', { enabled, time });
     },
