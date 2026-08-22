@@ -68,29 +68,29 @@ const Auth = {
                     
                     if (user) {
                         console.log('User signed in:', user.displayName);
-                        // Sync data for this user
                         FirebaseDB.setUserId(user.uid);
-                        FirebaseDB.syncFromCloud().then(async () => {
+
+                        // Register the push subscription independently of cloud data sync.
+                        if (typeof Notifications !== 'undefined') {
+                            (async () => {
+                                try {
+                                    await Notifications.init();
+                                    const oneSignal = await Notifications.waitForOneSignal(3000);
+                                    await Notifications.syncSubscription(oneSignal);
+                                    Notifications.checkAndPrompt();
+                                } catch (e) {
+                                    console.error('Error syncing notification subscription on login:', e);
+                                }
+                            })();
+                        }
+
+                        FirebaseDB.syncFromCloud().then(() => {
                             FirebaseDB.startRealtimeSync();
                             // Check if streak should be reset (user missed days)
                             Stats.checkStreakOnLoad();
                             Stats.render();
                             Topics.render();
                             
-                            // Initialize notifications and sync player ID (CRITICAL for iOS)
-                            if (typeof Notifications !== 'undefined') {
-                                await Notifications.init();
-                                
-                                try {
-                                    const oneSignal = await Notifications.waitForOneSignal(3000);
-                                    await Notifications.syncSubscription(oneSignal);
-                                } catch (e) {
-                                    console.error('Error syncing notification subscription on login:', e);
-                                }
-                                
-                                // Show notification permission prompt
-                                Notifications.checkAndPrompt();
-                            }
                         });
                     } else {
                         console.log('User signed out');
