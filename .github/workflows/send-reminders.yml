@@ -25,18 +25,11 @@ jobs:
         id: timezone
         run: |
           CURRENT_HOUR=$(TZ='Asia/Ho_Chi_Minh' date +%H):00
-          CURRENT_MINUTE=$(TZ='Asia/Ho_Chi_Minh' date +%M)
           echo "Current Vietnam time: $(TZ='Asia/Ho_Chi_Minh' date '+%Y-%m-%d %H:%M:%S')"
           echo "hour=$CURRENT_HOUR" >> "$GITHUB_OUTPUT"
 
-          if [ "$CURRENT_MINUTE" -gt 5 ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Send to subscribed users
-        if: steps.timezone.outputs.skip == 'false' && (github.event_name != 'workflow_dispatch' || inputs.test_email == '')
+        if: github.event_name == 'schedule'
         env:
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
           ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
