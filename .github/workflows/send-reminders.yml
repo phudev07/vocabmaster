@@ -97,8 +97,8 @@ jobs:
       - name: Send broadcast test notification
         if: github.event_name == 'workflow_dispatch' && inputs.broadcast_test == true
         env:
-          ONESIGNAL_API_KEY: \${{ secrets.ONESIGNAL_API_KEY }}
-          ONESIGNAL_APP_ID: \${{ secrets.ONESIGNAL_APP_ID }}
+          ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
         run: |
           RESPONSE=$(curl -sS -X POST https://api.onesignal.com/notifications \
             -H "Content-Type: application/json" \
