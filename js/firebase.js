@@ -343,6 +343,8 @@ const FirebaseDB = {
                 userId: this.userId,
                 enabled: enabled,
                 time: time,
+                oneSignalSubscriptionId: oneSignalPlayerId,
+                // Keep the old field while existing workflow data is migrated.
                 oneSignalPlayerId: oneSignalPlayerId,
                 updatedAt: serverTimestamp()
             });

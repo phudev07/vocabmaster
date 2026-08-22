@@ -2,94 +2,37 @@ name: Send Reminder Notifications
 
 on:
   schedule:
-    # Run every hour at minute 0 (Vietnam time UTC+7)
-    # Cron runs in UTC, so 17:00 UTC = 00:00 Vietnam time
-    # We run at minute 0 of each hour to catch all reminder times
+    # GitHub runs this in UTC; the job reads the current Vietnam hour below.
     - cron: '0 * * * *'
-  workflow_dispatch: # Allow manual trigger for testing
+  workflow_dispatch:
 
 jobs:
   send-reminders:
     runs-on: ubuntu-latest
-    
+
     steps:
-      - name: Setup timezone and get current hour
+      - name: Check Vietnam time
         id: timezone
         run: |
-          # Set timezone to Vietnam (UTC+7)
-          export TZ='Asia/Ho_Chi_Minh'
-          CURRENT_HOUR=$(date +%H):00
-          CURRENT_MINUTE=$(date +%M)
-          echo "Current Vietnam time: $(date '+%Y-%m-%d %H:%M:%S %Z')"
-          echo "Current hour: $CURRENT_HOUR"
-          echo "Current minute: $CURRENT_MINUTE"
-          echo "hour=$CURRENT_HOUR" >> $GITHUB_OUTPUT
-          echo "minute=$CURRENT_MINUTE" >> $GITHUB_OUTPUT
-          
-          # Only send if we're at minute 0-5 (to avoid delays)
+          CURRENT_HOUR=$(TZ='Asia/Ho_Chi_Minh' date +%H):00
+          CURRENT_MINUTE=$(TZ='Asia/Ho_Chi_Minh' date +%M)
+          echo "Current Vietnam time: $(TZ='Asia/Ho_Chi_Minh' date '+%Y-%m-%d %H:%M:%S')"
+          echo "hour=$CURRENT_HOUR" >> "$GITHUB_OUTPUT"
+
           if [ "$CURRENT_MINUTE" -gt 5 ]; then
-            echo "Skipping - not at start of hour (minute $CURRENT_MINUTE)"
-            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-      
-      # Step 1: Get all users from Firebase first (to avoid duplicates)
-      - name: Get users from Firebase
-        if: steps.timezone.outputs.skip == 'false'
-        id: firebase_users
-        env:
-          FIREBASE_PROJECT_ID: vocabmaster-4c784
-        run: |
-          CURRENT_HOUR="${{ steps.timezone.outputs.hour }}"
-          echo "Querying Firebase for users with reminder at $CURRENT_HOUR"
-          
-          # Query Firebase REST API for reminderSubscriptions
-          FIREBASE_URL="https://firestore.googleapis.com/v1/projects/$FIREBASE_PROJECT_ID/databases/(default)/documents/reminderSubscriptions"
-          
-          USERS=$(curl -s "$FIREBASE_URL")
-          echo "Firebase response received"
-          
-          # Extract player IDs for users with matching time and enabled=true
-          PLAYER_IDS=$(echo "$USERS" | jq -r '.documents[]? | select(.fields.enabled.booleanValue == true and .fields.time.stringValue == "'$CURRENT_HOUR'" and .fields.oneSignalPlayerId.stringValue != null) | .fields.oneSignalPlayerId.stringValue' 2>/dev/null || echo "")
-          
-          # Also get user IDs for deduplication
-          USER_IDS=$(echo "$USERS" | jq -r '.documents[]? | select(.fields.enabled.booleanValue == true and .fields.time.stringValue == "'$CURRENT_HOUR'") | .documentId' 2>/dev/null || echo "")
-          
-          if [ -n "$PLAYER_IDS" ] && [ "$PLAYER_IDS" != "null" ]; then
-            echo "Found player IDs: $PLAYER_IDS"
-            echo "Found user IDs: $USER_IDS"
-            
-            # Convert to JSON array
-            PLAYER_ARRAY=$(echo "$PLAYER_IDS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
-            echo "player_array=$PLAYER_ARRAY" >> $GITHUB_OUTPUT
-            echo "has_players=true" >> $GITHUB_OUTPUT
-          else
-            echo "No Firebase users found for $CURRENT_HOUR"
-            echo "has_players=false" >> $GITHUB_OUTPUT
-          fi
-      
-      # Step 2: Send via OneSignal tags (exclude users already in Firebase to avoid duplicates)
-      - name: Send to tagged users (OneSignal - Android/Desktop)
+
+      - name: Send to subscribed users
         if: steps.timezone.outputs.skip == 'false'
         env:
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
           ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
         run: |
           CURRENT_HOUR="${{ steps.timezone.outputs.hour }}"
-          echo "Sending to OneSignal tagged users for $CURRENT_HOUR"
-          
-          # Build exclude player IDs filter if we have Firebase users
-          EXCLUDE_FILTER=""
-          if [ "${{ steps.firebase_users.outputs.has_players }}" == "true" ]; then
-            PLAYER_ARRAY="${{ steps.firebase_users.outputs.player_array }}"
-            # Exclude these player IDs to avoid duplicates
-            EXCLUDE_FILTER="{\"field\": \"tag\", \"key\": \"reminder_enabled\", \"relation\": \"=\", \"value\": \"true\"},{\"operator\": \"AND\"},{\"field\": \"tag\", \"key\": \"reminder_time\", \"relation\": \"=\", \"value\": \"$CURRENT_HOUR\"},{\"operator\": \"AND\"},{\"field\": \"tag\", \"key\": \"firebase_uid\", \"relation\": \"!=\", \"value\": \"\"}"
-          fi
-          
-          # Call OneSignal API to send to users with matching tags
-          # Use filters to target users, but we'll rely on OneSignal's deduplication
-          RESPONSE=$(curl -s -X POST https://api.onesignal.com/notifications \
+          RESPONSE=$(curl -sS -X POST https://api.onesignal.com/notifications \
             -H "Content-Type: application/json" \
             -H "Authorization: Key $ONESIGNAL_API_KEY" \
             -d "{
@@ -99,50 +42,15 @@ jobs:
                 {\"operator\": \"AND\"},
                 {\"field\": \"tag\", \"key\": \"reminder_time\", \"relation\": \"=\", \"value\": \"$CURRENT_HOUR\"}
               ],
-              \"headings\": {\"en\": \"📚 VocabMaster\"},
+              \"headings\": {\"en\": \"VocabMaster\"},
               \"contents\": {\"en\": \"Đã đến giờ ôn tập từ vựng! Hãy dành 5 phút để học nhé 🔥\"},
               \"url\": \"https://vocabulary.click\",
               \"ttl\": 3600,
               \"priority\": 10
             }")
-          
-          NOTIFICATION_ID=$(echo "$RESPONSE" | jq -r '.id // empty' 2>/dev/null || echo "")
-          if [ -n "$NOTIFICATION_ID" ] && [ "$NOTIFICATION_ID" != "null" ]; then
-            echo "OneSignal notification sent successfully. ID: $NOTIFICATION_ID"
-          else
-            echo "OneSignal tags response: $RESPONSE"
-          fi
-      
-      # Step 3: Send to Firebase users by player ID (for iOS and users not tagged)
-      - name: Send to Firebase users (iOS support)
-        if: steps.timezone.outputs.skip == 'false' && steps.firebase_users.outputs.has_players == 'true'
-        env:
-          ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
-          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
-        run: |
-          CURRENT_HOUR="${{ steps.timezone.outputs.hour }}"
-          PLAYER_ARRAY="${{ steps.firebase_users.outputs.player_array }}"
-          
-          echo "Sending to Firebase users (iOS) for $CURRENT_HOUR"
-          echo "Player IDs: $PLAYER_ARRAY"
-          
-          # Send notification to specific player IDs
-          RESPONSE=$(curl -s -X POST https://api.onesignal.com/notifications \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Key $ONESIGNAL_API_KEY" \
-            -d "{
-              \"app_id\": \"$ONESIGNAL_APP_ID\",
-              \"include_player_ids\": $PLAYER_ARRAY,
-              \"headings\": {\"en\": \"📚 VocabMaster\"},
-              \"contents\": {\"en\": \"Đã đến giờ ôn tập từ vựng! Hãy dành 5 phút để học nhé 🔥\"},
-              \"url\": \"https://vocabulary.click\",
-              \"ttl\": 3600,
-              \"priority\": 10
-            }")
-          
-          NOTIFICATION_ID=$(echo "$RESPONSE" | jq -r '.id // empty' 2>/dev/null || echo "")
-          if [ -n "$NOTIFICATION_ID" ] && [ "$NOTIFICATION_ID" != "null" ]; then
-            echo "Firebase users notification sent successfully. ID: $NOTIFICATION_ID"
-          else
-            echo "Firebase users response: $RESPONSE"
+
+          echo "$RESPONSE"
+          if ! echo "$RESPONSE" | jq -e '.id' >/dev/null 2>&1; then
+            echo "OneSignal rejected the reminder request"
+            exit 1
           fi

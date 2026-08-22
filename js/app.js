@@ -121,10 +121,10 @@ const App = {
         const notifyBtn = document.getElementById('notifyBtn');
         if (notifyBtn) {
             // Show button if notifications are supported
-            if ('Notification' in window) {
+            if (Notifications.isSupported()) {
                 notifyBtn.style.display = 'flex';
                 // Update button state
-                if (Notification.permission === 'granted') {
+                if (Notifications.getPermissionState() === 'granted') {
                     notifyBtn.textContent = '🔔';
                     notifyBtn.title = 'Thông báo đã bật';
                 } else {
@@ -134,7 +134,7 @@ const App = {
             }
             
             notifyBtn.addEventListener('click', async () => {
-                if (Notification.permission === 'granted') {
+                if (Notifications.getPermissionState() === 'granted') {
                     this.showToast('Thông báo đã được bật', 'success');
                 } else {
                     const granted = await Notifications.requestPermission();
@@ -622,34 +622,41 @@ const App = {
         if (enableNotifBtn) {
             // Update button state based on current permission
             const updateNotifBtn = () => {
-                if (Notification.permission === 'granted') {
+                const permission = Notifications.getPermissionState();
+                if (permission === 'granted') {
                     enableNotifBtn.textContent = '✅ Đã bật thông báo';
                     enableNotifBtn.disabled = true;
                     enableNotifBtn.classList.remove('btn-primary');
                     enableNotifBtn.classList.add('btn-secondary');
-                } else if (Notification.permission === 'denied') {
+                } else if (permission === 'denied') {
                     enableNotifBtn.textContent = '❌ Thông báo bị chặn';
                     enableNotifBtn.disabled = true;
                     enableNotifBtn.classList.remove('btn-primary');
                     enableNotifBtn.classList.add('btn-secondary');
+                } else if (Notifications.isIOS() && !Notifications.isStandalone()) {
+                    enableNotifBtn.textContent = '📲 Cài app lên màn hình chính trước';
+                    enableNotifBtn.disabled = true;
+                }
+
+                // Recover users whose old local flag said enabled but OneSignal lost the subscription.
+                if (permission === 'granted') {
+                    Notifications.waitForOneSignal(1500).then(async (oneSignal) => {
+                        if (oneSignal && !(await Notifications.getSubscriptionId(oneSignal))) {
+                            enableNotifBtn.textContent = '🔔 Bật lại thông báo đẩy';
+                            enableNotifBtn.disabled = false;
+                            enableNotifBtn.classList.remove('btn-secondary');
+                            enableNotifBtn.classList.add('btn-primary');
+                        }
+                    });
                 }
             };
             updateNotifBtn();
             
             enableNotifBtn.onclick = async () => {
                 if (typeof Notifications !== 'undefined') {
-                    const result = await Notifications.promptNativePermission();
+                    const result = await Notifications.requestPermission();
                     updateNotifBtn();
-                    if (result) {
-                        // Also try OneSignal opt-in
-                        if (window.OneSignal) {
-                            try {
-                                await window.OneSignal.User.PushSubscription.optIn();
-                            } catch (e) {
-                                console.log('OneSignal optIn:', e);
-                            }
-                        }
-                    }
+                    if (result) Notifications.scheduleDailyReminder();
                 }
             };
         }
@@ -863,7 +870,8 @@ const App = {
     // Register Service Worker for PWA
     registerServiceWorker() {
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js')
+            // OneSignal must own the root worker so push works after the PWA is closed.
+            navigator.serviceWorker.register('./OneSignalSDKWorker.js')
                 .then((registration) => {
                     console.log('Service Worker registered:', registration.scope);
                 })

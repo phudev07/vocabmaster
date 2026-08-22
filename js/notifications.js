@@ -5,6 +5,8 @@
 const Notifications = {
     initialized: false,
     oneSignalReady: false,
+    initPromise: null,
+    subscriptionListenerAttached: false,
     
     // OneSignal App ID
     ONESIGNAL_APP_ID: '098cbdcc-90ec-4af9-84a1-89e53dde4723',
@@ -12,243 +14,245 @@ const Notifications = {
     // Initialize OneSignal (call once on app start)
     async init() {
         if (this.initialized) return true;
-        
-        // Check if OneSignal is available
-        if (typeof window.OneSignal === 'undefined') {
-            console.log('OneSignal SDK not loaded yet');
-            return false;
-        }
-        
-        try {
-            // OneSignal is already initialized by SDK, just set up listeners
-            this.oneSignalReady = true;
-            this.initialized = true;
-            
-            // Listen for subscription changes
-            window.OneSignal.User.PushSubscription.addEventListener('change', async (event) => {
-                console.log('Push subscription changed:', event.current);
-                if (event.current.optedIn) {
-                    localStorage.setItem('vocabmaster_notif_subscribed', 'true');
-                    // Tag user when subscribed
-                    if (Auth.isLoggedIn()) {
-                        await this.tagUser();
-                        await this.updateReminderTag(); // Sync reminder tags too
-                        
-                        // CRITICAL: Update player ID in Firebase for iOS support
-                        try {
-                            const playerId = await window.OneSignal.User.PushSubscription.id;
-                            if (playerId && FirebaseDB.initialized) {
-                                const settings = Storage.getSettings();
-                                await FirebaseDB.saveReminderSettings(
-                                    settings.reminderEnabled !== false,
-                                    settings.reminderTime || '20:00',
-                                    playerId
-                                );
-                                console.log('Player ID synced to Firebase:', playerId);
-                            }
-                        } catch (e) {
-                            console.error('Error syncing player ID:', e);
-                        }
-                    }
+        if (this.initPromise) return this.initPromise;
+
+        this.initPromise = (async () => {
+            const oneSignal = await this.waitForOneSignal();
+            if (!oneSignal?.User?.PushSubscription) {
+                console.log('OneSignal is unavailable on this browser');
+                return false;
+            }
+
+            try {
+                this.oneSignalReady = true;
+                this.initialized = true;
+
+                if (!this.subscriptionListenerAttached) {
+                    oneSignal.User.PushSubscription.addEventListener('change', async (event) => {
+                        if (!event.current?.optedIn) return;
+                        localStorage.setItem('vocabmaster_notif_subscribed', 'true');
+                        await this.syncSubscription(oneSignal);
+                    });
+                    this.subscriptionListenerAttached = true;
                 }
-            });
-            
-            console.log('Notifications module initialized');
-            return true;
-        } catch (error) {
-            console.error('Notifications init error:', error);
-            return false;
+
+                console.log('Notifications module initialized');
+                return true;
+            } catch (error) {
+                console.error('Notifications init error:', error);
+                return false;
+            }
+        })();
+
+        const result = await this.initPromise;
+        if (!result) this.initPromise = null;
+        return result;
+    },
+
+    // Wait for the deferred SDK queue instead of assuming the global is ready.
+    async waitForOneSignal(timeoutMs = 10000) {
+        if (window.OneSignal?.User) return window.OneSignal;
+        if (window.OneSignalReady) {
+            try {
+                const oneSignal = await Promise.race([
+                    window.OneSignalReady,
+                    new Promise((resolve) => setTimeout(() => resolve(null), timeoutMs))
+                ]);
+                if (oneSignal?.User) return oneSignal;
+            } catch (error) {
+                console.warn('OneSignal ready wait failed:', error);
+            }
         }
+
+        const deferred = window.OneSignalDeferred = window.OneSignalDeferred || [];
+        return new Promise((resolve) => {
+            let settled = false;
+            const finish = (oneSignal) => {
+                if (settled) return;
+                settled = true;
+                resolve(oneSignal?.User ? oneSignal : null);
+            };
+            deferred.push(finish);
+            setTimeout(() => finish(null), timeoutMs);
+        });
+    },
+
+    isSupported() {
+        return typeof window !== 'undefined' && 'Notification' in window;
+    },
+
+    getPermissionState() {
+        return this.isSupported() ? Notification.permission : 'unsupported';
+    },
+
+    isIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    },
+
+    isStandalone() {
+        return window.matchMedia('(display-mode: standalone)').matches ||
+            window.navigator.standalone === true;
+    },
+
+    async getSubscriptionId(oneSignal = window.OneSignal) {
+        if (!oneSignal?.User?.PushSubscription) return null;
+        const optedIn = await oneSignal.User.PushSubscription.optedIn;
+        return optedIn ? (await oneSignal.User.PushSubscription.id) || null : null;
+    },
+
+    async syncSubscription(oneSignal = window.OneSignal) {
+        if (!oneSignal) return;
+        const subscriptionId = await this.getSubscriptionId(oneSignal);
+        if (subscriptionId && FirebaseDB.initialized && Auth.isLoggedIn()) {
+            const settings = Storage.getSettings();
+            await FirebaseDB.saveReminderSettings(
+                settings.reminderEnabled !== false,
+                settings.reminderTime || '20:00',
+                subscriptionId
+            );
+        }
+        if (Auth.isLoggedIn()) await this.tagUser(oneSignal);
+        await this.updateReminderTag(oneSignal);
     },
     
     // Request permission and register with OneSignal
     async requestPermission() {
-        if (!this.initialized) {
-            await this.init();
+        // iOS requires the native prompt to happen directly from a user gesture.
+        if (this.isIOS() && this.isStandalone() && this.getPermissionState() === 'default') {
+            return this.promptNativePermission();
         }
-        
+
+        let oneSignal = window.OneSignal?.User ? window.OneSignal : null;
+        // Do not delay the browser prompt when the SDK is still loading.
+        if (!oneSignal && this.getPermissionState() === 'default') {
+            return this.promptNativePermission();
+        }
+        oneSignal = oneSignal || await this.waitForOneSignal(5000);
         try {
-            // Use OneSignal's permission flow
-            if (window.OneSignal) {
-                await window.OneSignal.Slidedown.promptPush();
-                
-                // Wait a moment for subscription to process
+            if (oneSignal?.Slidedown?.promptPush) {
+                if (oneSignal.Notifications?.isPushSupported &&
+                    !(await oneSignal.Notifications.isPushSupported())) {
+                    App.showToast('Thiết bị này không hỗ trợ thông báo đẩy', 'warning');
+                    return false;
+                }
+
+                await oneSignal.Slidedown.promptPush();
                 await new Promise(r => setTimeout(r, 1000));
-                
-                // Check if subscribed
-                const isSubscribed = await window.OneSignal.User.PushSubscription.optedIn;
-                
+
+                let isSubscribed = await oneSignal.User.PushSubscription.optedIn;
+                if (!isSubscribed && this.getPermissionState() === 'granted') {
+                    await oneSignal.User.PushSubscription.optIn();
+                    isSubscribed = await oneSignal.User.PushSubscription.optedIn;
+                }
+
                 if (isSubscribed) {
                     console.log('OneSignal push subscription active');
                     App.showToast('Đã bật thông báo! 🔔', 'success');
-                    
-                    // Set BOTH flags
                     localStorage.setItem('vocabmaster_notif_subscribed', 'true');
                     localStorage.setItem('vocabmaster_notif_prompted', 'true');
-                    
-                    // Tag user with Firebase UID for targeted notifications
-                    if (Auth.isLoggedIn()) {
-                        await this.tagUser();
-                    }
-                    
-                    // Set reminder time tag
-                    await this.updateReminderTag();
-                    
+                    await this.syncSubscription(oneSignal);
                     return true;
                 } else {
                     console.log('User did not subscribe');
                     localStorage.setItem('vocabmaster_notif_prompted', 'dismissed');
                     return false;
                 }
-            } else {
-                // Fallback to native permission
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    App.showToast('Đã bật thông báo! 🔔', 'success');
-                    localStorage.setItem('vocabmaster_notif_subscribed', 'true');
-                    localStorage.setItem('vocabmaster_notif_prompted', 'true');
-                    return true;
-                } else if (permission === 'denied') {
-                    localStorage.setItem('vocabmaster_notif_prompted', 'denied');
-                }
-                return false;
             }
+
+            return this.promptNativePermission(oneSignal);
         } catch (error) {
             console.error('Error requesting permission:', error);
-            // Still mark as prompted to avoid loop
             localStorage.setItem('vocabmaster_notif_prompted', 'error');
             return false;
         }
     },
     
     // Tag user with Firebase UID for targeting
-    async tagUser() {
+    async tagUser(oneSignal = null) {
         if (!Auth.isLoggedIn()) return;
-        
-        const tagUserTags = async (OneSignal) => {
-            try {
-                await OneSignal.User.addTags({
-                    firebase_uid: Auth.user.uid,
-                    user_name: Auth.user.displayName || 'User',
-                    user_email: Auth.user.email || ''
-                });
-                console.log('User tagged with Firebase UID');
-                
-                // Also sync player ID to Firebase when tagging
-                try {
-                    const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
-                    if (isSubscribed) {
-                        const playerId = await OneSignal.User.PushSubscription.id;
-                        if (playerId && FirebaseDB.initialized) {
-                            const settings = Storage.getSettings();
-                            await FirebaseDB.saveReminderSettings(
-                                settings.reminderEnabled !== false,
-                                settings.reminderTime || '20:00',
-                                playerId
-                            );
-                            console.log('Player ID synced during tag:', playerId);
-                        }
-                    }
-                } catch (e) {
-                    console.log('Could not sync player ID during tag:', e);
-                }
-            } catch (error) {
-                console.error('Error tagging user:', error);
-            }
-        };
-        
-        // Try direct call first, fallback to deferred
-        if (window.OneSignal && window.OneSignal.User) {
-            await tagUserTags(window.OneSignal);
-        } else if (window.OneSignalDeferred) {
-            window.OneSignalDeferred.push(tagUserTags);
+
+        oneSignal = oneSignal || await this.waitForOneSignal(5000);
+        if (!oneSignal?.User?.addTags) return;
+
+        try {
+            await oneSignal.User.addTags({
+                firebase_uid: Auth.user.uid,
+                user_name: Auth.user.displayName || 'User',
+                user_email: Auth.user.email || ''
+            });
+            console.log('User tagged with Firebase UID');
+        } catch (error) {
+            console.error('Error tagging user:', error);
         }
     },
     
     // Update reminder time tag for scheduled notifications
-    async updateReminderTag() {
-        // Use OneSignalDeferred to ensure SDK is ready (especially on mobile)
-        if (!window.OneSignalDeferred && !window.OneSignal) {
+    async updateReminderTag(oneSignal = null) {
+        oneSignal = oneSignal || await this.waitForOneSignal(5000);
+        if (!oneSignal?.User?.addTags) {
             console.log('OneSignal not available for tags');
-            return;
+            return false;
         }
-        
+
         const settings = Storage.getSettings();
         const reminderEnabled = settings.reminderEnabled !== false;
         const reminderTime = settings.reminderTime || '20:00';
-        
         console.log('Updating OneSignal tags:', { reminder_enabled: reminderEnabled, reminder_time: reminderTime });
-        
-        // Use deferred pattern for mobile compatibility
-        const updateTags = async (OneSignal) => {
-            try {
-                await OneSignal.User.addTags({
-                    reminder_enabled: reminderEnabled ? 'true' : 'false',
-                    reminder_time: reminderTime
-                });
-                
-                console.log('Reminder tags updated successfully!');
-                
-                // Show confirmation to user
-                if (typeof App !== 'undefined' && App.showToast) {
-                    App.showToast(`🔔 Đã đồng bộ nhắc nhở lúc ${reminderTime}`, 'success');
-                }
-            } catch (error) {
-                console.error('Error updating reminder tags:', error);
-                if (typeof App !== 'undefined' && App.showToast) {
-                    App.showToast('Lỗi đồng bộ thông báo', 'error');
-                }
-            }
-        };
-        
-        // Try direct call first, fallback to deferred
-        if (window.OneSignal && window.OneSignal.User) {
-            await updateTags(window.OneSignal);
-        } else if (window.OneSignalDeferred) {
-            window.OneSignalDeferred.push(updateTags);
+
+        try {
+            await oneSignal.User.addTags({
+                reminder_enabled: reminderEnabled ? 'true' : 'false',
+                reminder_time: reminderTime
+            });
+            console.log('Reminder tags updated successfully');
+            return true;
+        } catch (error) {
+            console.error('Error updating reminder tags:', error);
+            return false;
         }
     },
     
     // Request native notification permission directly (no custom modal)
-    async promptNativePermission() {
-        // Skip if already granted or denied
-        if (!('Notification' in window)) {
+    async promptNativePermission(oneSignal = null) {
+        if (!this.isSupported()) {
             console.log('Notifications not supported');
             return false;
         }
-        
-        if (Notification.permission === 'granted') {
+
+        if (this.isIOS() && !this.isStandalone()) {
+            App.showToast('Trên iPhone/iPad, hãy thêm web vào Màn hình chính rồi mở app để bật thông báo', 'warning');
+            return false;
+        }
+
+        const permission = this.getPermissionState();
+        if (permission === 'granted') {
             console.log('Already have notification permission');
             localStorage.setItem('vocabmaster_notif_subscribed', 'true');
-            if (Auth.isLoggedIn()) {
-                this.tagUser();
-            }
+            oneSignal = oneSignal || await this.waitForOneSignal(3000);
+            if (oneSignal) await this.syncSubscription(oneSignal);
             return true;
         }
-        
-        if (Notification.permission === 'denied') {
+
+        if (permission === 'denied') {
             console.log('Notifications denied by user');
             localStorage.setItem('vocabmaster_notif_prompted', 'denied');
             return false;
         }
-        
-        // Request permission - this shows the NATIVE device prompt
+
         try {
-            const permission = await Notification.requestPermission();
-            console.log('Permission result:', permission);
-            
-            if (permission === 'granted') {
+            const result = await Notification.requestPermission();
+            console.log('Permission result:', result);
+
+            if (result === 'granted') {
                 App.showToast('Đã bật thông báo! 🔔', 'success');
                 localStorage.setItem('vocabmaster_notif_subscribed', 'true');
                 localStorage.setItem('vocabmaster_notif_prompted', 'true');
-                
-                // Register with OneSignal if available
-                if (window.OneSignal) {
+
+                oneSignal = oneSignal || await this.waitForOneSignal(3000);
+                if (oneSignal?.User?.PushSubscription?.optIn) {
                     try {
-                        await window.OneSignal.User.PushSubscription.optIn();
-                        if (Auth.isLoggedIn()) {
-                            await this.tagUser();
-                        }
+                        await oneSignal.User.PushSubscription.optIn();
+                        await this.syncSubscription(oneSignal);
                     } catch (e) {
                         console.log('OneSignal optIn error:', e);
                     }
@@ -267,22 +271,24 @@ const Notifications = {
     },
     
     // Check and prompt on login (call this after user logs in)
-    checkAndPrompt() {
-        // Skip if already subscribed or prompted
-        if (localStorage.getItem('vocabmaster_notif_subscribed') === 'true') {
+    async checkAndPrompt() {
+        // iOS only permits this prompt after installation and a user gesture.
+        if (this.isIOS()) return;
+
+        const prompted = localStorage.getItem('vocabmaster_notif_prompted');
+        const oneSignal = await this.waitForOneSignal(3000);
+        if (await this.getSubscriptionId(oneSignal)) {
+            localStorage.setItem('vocabmaster_notif_subscribed', 'true');
             console.log('Already subscribed, skipping prompt');
             return;
         }
+
+        // Do not trust stale local flags when the SDK can report the real state.
+        if (!oneSignal && (prompted === 'true' || prompted === 'denied')) return;
         
-        const prompted = localStorage.getItem('vocabmaster_notif_prompted');
-        if (prompted === 'true' || prompted === 'denied') {
-            console.log('Already prompted, skipping');
-            return;
-        }
-        
-        // Delay then request native permission
+        // OneSignal's prompt is more reliable on Android than a delayed native call.
         setTimeout(() => {
-            this.promptNativePermission();
+            this.requestPermission();
         }, 3000);
     },
     
@@ -304,12 +310,15 @@ const Notifications = {
     
     // Show local notification (for foreground)
     showLocalNotification(title, body) {
-        if (Notification.permission === 'granted') {
+        if (!this.isSupported() || this.getPermissionState() !== 'granted') return;
+        try {
             new Notification(title, {
                 body: body,
                 icon: './icons/icon-192.png',
                 badge: './icons/icon-192.png'
             });
+        } catch (error) {
+            console.warn('Local notification unavailable:', error);
         }
     },
     
@@ -379,45 +388,17 @@ const Notifications = {
         
         // Save to Firebase (works on all devices including iOS)
         if (typeof FirebaseDB !== 'undefined' && FirebaseDB.initialized && Auth.isLoggedIn()) {
-            // Get OneSignal player ID if available - CRITICAL for iOS
-            let playerId = null;
+            let subscriptionId = null;
             try {
-                // Wait for OneSignal to be ready (especially important for iOS)
-                if (window.OneSignal && window.OneSignal.User) {
-                    // Check if subscribed first
-                    const isSubscribed = await window.OneSignal.User.PushSubscription.optedIn;
-                    if (isSubscribed) {
-                        const id = await window.OneSignal.User.PushSubscription.id;
-                        playerId = id || null;
-                        console.log('OneSignal player ID retrieved:', playerId);
-                    } else {
-                        console.log('User not subscribed to OneSignal');
-                    }
-                } else if (window.OneSignalDeferred) {
-                    // Use deferred pattern for mobile/iOS
-                    await new Promise((resolve) => {
-                        window.OneSignalDeferred.push(async (OneSignal) => {
-                            try {
-                                const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
-                                if (isSubscribed) {
-                                    playerId = await OneSignal.User.PushSubscription.id;
-                                    console.log('OneSignal player ID (deferred):', playerId);
-                                }
-                            } catch (e) {
-                                console.log('Could not get player ID (deferred):', e);
-                            }
-                            resolve();
-                        });
-                    });
-                }
+                const oneSignal = await this.waitForOneSignal(3000);
+                subscriptionId = await this.getSubscriptionId(oneSignal);
             } catch (e) {
-                console.error('Error getting OneSignal player ID:', e);
+                console.error('Error getting OneSignal subscription ID:', e);
             }
             
-            // Save to Firebase with player ID
-            const saved = await FirebaseDB.saveReminderSettings(enabled, time, playerId);
+            const saved = await FirebaseDB.saveReminderSettings(enabled, time, subscriptionId);
             if (saved) {
-                console.log('Reminder saved to Firebase with player ID:', playerId);
+                console.log('Reminder saved to Firebase with subscription ID:', subscriptionId);
                 App.showToast(`🔔 Đã lưu nhắc nhở lúc ${time}`, 'success');
             } else {
                 console.warn('Failed to save reminder to Firebase');
@@ -446,7 +427,7 @@ const Notifications = {
     
     // Check if notifications are enabled
     isEnabled() {
-        return Notification.permission === 'granted';
+        return this.getPermissionState() === 'granted';
     },
     
     // ========================================

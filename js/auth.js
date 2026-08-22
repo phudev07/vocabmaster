@@ -81,46 +81,11 @@ const Auth = {
                             if (typeof Notifications !== 'undefined') {
                                 await Notifications.init();
                                 
-                                // Sync player ID to Firebase when user logs in
-                                // This ensures iOS users get notifications
                                 try {
-                                    let playerId = null;
-                                    if (window.OneSignal && window.OneSignal.User) {
-                                        const isSubscribed = await window.OneSignal.User.PushSubscription.optedIn;
-                                        if (isSubscribed) {
-                                            playerId = await window.OneSignal.User.PushSubscription.id;
-                                        }
-                                    } else if (window.OneSignalDeferred) {
-                                        await new Promise((resolve) => {
-                                            window.OneSignalDeferred.push(async (OneSignal) => {
-                                                try {
-                                                    const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
-                                                    if (isSubscribed) {
-                                                        playerId = await OneSignal.User.PushSubscription.id;
-                                                    }
-                                                } catch (e) {
-                                                    console.log('Could not get player ID on login:', e);
-                                                }
-                                                resolve();
-                                            });
-                                        });
-                                    }
-                                    
-                                    if (playerId && FirebaseDB.initialized) {
-                                        const settings = Storage.getSettings();
-                                        await FirebaseDB.saveReminderSettings(
-                                            settings.reminderEnabled !== false,
-                                            settings.reminderTime || '20:00',
-                                            playerId
-                                        );
-                                        console.log('Player ID synced on login:', playerId);
-                                    }
-                                    
-                                    // Tag user and update reminder tags
-                                    await Notifications.tagUser();
-                                    await Notifications.updateReminderTag();
+                                    const oneSignal = await Notifications.waitForOneSignal(3000);
+                                    await Notifications.syncSubscription(oneSignal);
                                 } catch (e) {
-                                    console.error('Error syncing player ID on login:', e);
+                                    console.error('Error syncing notification subscription on login:', e);
                                 }
                                 
                                 // Show notification permission prompt

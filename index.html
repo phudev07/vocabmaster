@@ -61,10 +61,18 @@
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
     <script>
         window.OneSignalDeferred = window.OneSignalDeferred || [];
-        OneSignalDeferred.push(async function(OneSignal) {
-            await OneSignal.init({
-                appId: "098cbdcc-90ec-4af9-84a1-89e53dde4723",
-                allowLocalhostAsSecureOrigin: true
+        window.OneSignalReady = new Promise((resolve) => {
+            window.OneSignalDeferred.push(async function(OneSignal) {
+                try {
+                    await OneSignal.init({
+                        appId: "098cbdcc-90ec-4af9-84a1-89e53dde4723",
+                        allowLocalhostAsSecureOrigin: true
+                    });
+                    resolve(OneSignal);
+                } catch (error) {
+                    console.error('OneSignal init failed:', error);
+                    resolve(null);
+                }
             });
         });
     </script>
