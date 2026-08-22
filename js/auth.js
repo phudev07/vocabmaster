@@ -90,7 +90,6 @@ const Auth = {
                             Stats.checkStreakOnLoad();
                             Stats.render();
                             Topics.render();
-                            
                         });
                     } else {
                         console.log('User signed out');
