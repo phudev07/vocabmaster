@@ -67,13 +67,14 @@ jobs:
           ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
           TEST_EMAIL: ${{ inputs.test_email }}
         run: |
+          TEST_EMAIL=$(printf '%s' "$TEST_EMAIL" | tr '[:upper:]' '[:lower:]')
           RESPONSE=$(curl -sS -X POST https://api.onesignal.com/notifications \
             -H "Content-Type: application/json" \
             -H "Authorization: Key $ONESIGNAL_API_KEY" \
             -d "{
               \"app_id\": \"$ONESIGNAL_APP_ID\",
               \"filters\": [
-                {\"field\": \"tag\", \"key\": \"user_email\", \"relation\": \"=\", \"value\": \"$TEST_EMAIL\"}
+                {\"field\": \"tag\", \"key\": \"user_email_normalized\", \"relation\": \"=\", \"value\": \"$TEST_EMAIL\"}
               ],
               \"headings\": {\"en\": \"VocabMaster test\"},
               \"contents\": {\"en\": \"Đây là thông báo thử nghiệm. Hãy kiểm tra khi app đang đóng nhé!\"},

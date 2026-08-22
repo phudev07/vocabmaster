@@ -219,10 +219,12 @@ const Notifications = {
                     console.warn('OneSignal identity sync failed:', error);
                 }
             }
+            const normalizedEmail = (Auth.user.email || '').trim().toLowerCase();
             await oneSignal.User.addTags({
                 firebase_uid: Auth.user.uid,
                 user_name: Auth.user.displayName || 'User',
-                user_email: Auth.user.email || ''
+                user_email: normalizedEmail,
+                user_email_normalized: normalizedEmail
             });
             console.log('User tagged with Firebase UID');
         } catch (error) {
@@ -272,9 +274,13 @@ const Notifications = {
         if (permission === 'granted') {
             console.log('Already have notification permission');
             localStorage.setItem('vocabmaster_notif_subscribed', 'true');
-            oneSignal = oneSignal || await this.waitForOneSignal(3000);
-            if (oneSignal) await this.syncSubscription(oneSignal);
-            return true;
+            oneSignal = oneSignal || await this.waitForOneSignal(10000);
+            if (oneSignal) {
+                await this.syncSubscription(oneSignal);
+                if (await this.getSubscriptionId(oneSignal)) return true;
+            }
+            App.showToast('Đã cấp quyền nhưng chưa đồng bộ được thiết bị', 'warning');
+            return false;
         }
 
         if (permission === 'denied') {
@@ -292,16 +298,23 @@ const Notifications = {
                 localStorage.setItem('vocabmaster_notif_subscribed', 'true');
                 localStorage.setItem('vocabmaster_notif_prompted', 'true');
 
-                oneSignal = oneSignal || await this.waitForOneSignal(3000);
+                oneSignal = oneSignal || await this.waitForOneSignal(10000);
+                let subscriptionReady = false;
                 if (oneSignal?.User?.PushSubscription?.optIn) {
                     try {
                         await oneSignal.User.PushSubscription.optIn();
                         await this.syncSubscription(oneSignal);
+                        subscriptionReady = !!(await this.getSubscriptionId(oneSignal));
                     } catch (e) {
                         console.log('OneSignal optIn error:', e);
                     }
                 }
-                
+
+                if (!subscriptionReady) {
+                    App.showToast('Đã cấp quyền nhưng chưa đồng bộ được thiết bị', 'warning');
+                    return false;
+                }
+
                 return true;
             } else {
                 localStorage.setItem('vocabmaster_notif_prompted', 'denied');
