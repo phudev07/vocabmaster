@@ -226,6 +226,9 @@ const Notifications = {
                 user_email: normalizedEmail,
                 user_email_normalized: normalizedEmail
             });
+            if (oneSignal.User.addAlias && normalizedEmail) {
+                await oneSignal.User.addAlias('email', normalizedEmail);
+            }
             console.log('User tagged with Firebase UID');
         } catch (error) {
             console.error('Error tagging user:', error);

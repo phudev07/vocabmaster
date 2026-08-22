@@ -73,9 +73,8 @@ jobs:
             -H "Authorization: Key $ONESIGNAL_API_KEY" \
             -d "{
               \"app_id\": \"$ONESIGNAL_APP_ID\",
-              \"filters\": [
-                {\"field\": \"tag\", \"key\": \"user_email_normalized\", \"relation\": \"=\", \"value\": \"$TEST_EMAIL\"}
-              ],
+              \"include_aliases\": {\"email\": [\"$TEST_EMAIL\"]},
+              \"target_channel\": \"push\",
               \"headings\": {\"en\": \"VocabMaster test\"},
               \"contents\": {\"en\": \"Đây là thông báo thử nghiệm. Hãy kiểm tra khi app đang đóng nhé!\"},
               \"url\": \"https://vocabulary.click\",
