@@ -100,9 +100,37 @@ const Notifications = {
         return optedIn ? (await oneSignal.User.PushSubscription.id) || null : null;
     },
 
+    // iOS can grant permission before OneSignal finishes creating its subscription.
+    async waitForActiveSubscription(oneSignal, timeoutMs = 10000) {
+        if (!oneSignal?.User?.PushSubscription) return null;
+
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+            try {
+                let optedIn = await oneSignal.User.PushSubscription.optedIn;
+                if (!optedIn && this.getPermissionState() === 'granted' && oneSignal.User.PushSubscription.optIn) {
+                    await oneSignal.User.PushSubscription.optIn();
+                    optedIn = await oneSignal.User.PushSubscription.optedIn;
+                }
+
+                const subscriptionId = optedIn ? await oneSignal.User.PushSubscription.id : null;
+                if (subscriptionId) return subscriptionId;
+            } catch (error) {
+                console.warn('Waiting for OneSignal subscription:', error);
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        return null;
+    },
+
     async syncSubscription(oneSignal = window.OneSignal) {
         if (!oneSignal) return;
-        const subscriptionId = await this.getSubscriptionId(oneSignal);
+        let subscriptionId = await this.getSubscriptionId(oneSignal);
+        if (!subscriptionId && this.getPermissionState() === 'granted') {
+            subscriptionId = await this.waitForActiveSubscription(oneSignal);
+        }
         if (subscriptionId && FirebaseDB.initialized && Auth.isLoggedIn()) {
             const settings = Storage.getSettings();
             await FirebaseDB.saveReminderSettings(
@@ -119,7 +147,16 @@ const Notifications = {
     async requestPermission() {
         // iOS requires the native prompt to happen directly from a user gesture.
         if (this.isIOS() && this.isStandalone() && this.getPermissionState() === 'default') {
-            return this.promptNativePermission();
+            const oneSignal = window.OneSignal?.User ? window.OneSignal : null;
+            if (oneSignal?.Notifications?.requestPermission) {
+                try {
+                    await oneSignal.Notifications.requestPermission();
+                    return this.promptNativePermission(oneSignal);
+                } catch (error) {
+                    console.warn('OneSignal iOS permission request failed:', error);
+                }
+            }
+            return this.promptNativePermission(oneSignal);
         }
 
         let oneSignal = window.OneSignal?.User ? window.OneSignal : null;
@@ -175,6 +212,13 @@ const Notifications = {
         if (!oneSignal?.User?.addTags) return;
 
         try {
+            if (oneSignal.login) {
+                try {
+                    await oneSignal.login(Auth.user.uid);
+                } catch (error) {
+                    console.warn('OneSignal identity sync failed:', error);
+                }
+            }
             await oneSignal.User.addTags({
                 firebase_uid: Auth.user.uid,
                 user_name: Auth.user.displayName || 'User',

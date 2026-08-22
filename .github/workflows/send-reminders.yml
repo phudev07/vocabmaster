@@ -83,6 +83,7 @@ jobs:
             }")
 
           echo "$RESPONSE"
+          echo "OneSignal recipients: $(echo "$RESPONSE" | jq -r '.recipients // 0')"
           if ! echo "$RESPONSE" | jq -e '.id' >/dev/null 2>&1; then
             echo "OneSignal rejected the targeted test request"
             exit 1

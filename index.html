@@ -66,6 +66,8 @@
                 try {
                     await OneSignal.init({
                         appId: "098cbdcc-90ec-4af9-84a1-89e53dde4723",
+                        serviceWorkerPath: "OneSignalSDKWorker.js",
+                        serviceWorkerParam: { scope: "/" },
                         allowLocalhostAsSecureOrigin: true
                     });
                     resolve(OneSignal);
