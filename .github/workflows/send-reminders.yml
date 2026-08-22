@@ -5,6 +5,11 @@ on:
     # GitHub runs this in UTC; the job reads the current Vietnam hour below.
     - cron: '0 * * * *'
   workflow_dispatch:
+    inputs:
+      test_email:
+        description: 'Only send a test push to this user email'
+        required: false
+        type: string
 
 jobs:
   send-reminders:
@@ -26,7 +31,7 @@ jobs:
           fi
 
       - name: Send to subscribed users
-        if: steps.timezone.outputs.skip == 'false'
+        if: steps.timezone.outputs.skip == 'false' && (github.event_name != 'workflow_dispatch' || inputs.test_email == '')
         env:
           ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
           ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
@@ -52,5 +57,33 @@ jobs:
           echo "$RESPONSE"
           if ! echo "$RESPONSE" | jq -e '.id' >/dev/null 2>&1; then
             echo "OneSignal rejected the reminder request"
+            exit 1
+          fi
+
+      - name: Send targeted test notification
+        if: github.event_name == 'workflow_dispatch' && inputs.test_email != ''
+        env:
+          ONESIGNAL_API_KEY: ${{ secrets.ONESIGNAL_API_KEY }}
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+          TEST_EMAIL: ${{ inputs.test_email }}
+        run: |
+          RESPONSE=$(curl -sS -X POST https://api.onesignal.com/notifications \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Key $ONESIGNAL_API_KEY" \
+            -d "{
+              \"app_id\": \"$ONESIGNAL_APP_ID\",
+              \"filters\": [
+                {\"field\": \"tag\", \"key\": \"user_email\", \"relation\": \"=\", \"value\": \"$TEST_EMAIL\"}
+              ],
+              \"headings\": {\"en\": \"VocabMaster test\"},
+              \"contents\": {\"en\": \"Đây là thông báo thử nghiệm. Hãy kiểm tra khi app đang đóng nhé!\"},
+              \"url\": \"https://vocabulary.click\",
+              \"ttl\": 3600,
+              \"priority\": 10
+            }")
+
+          echo "$RESPONSE"
+          if ! echo "$RESPONSE" | jq -e '.id' >/dev/null 2>&1; then
+            echo "OneSignal rejected the targeted test request"
             exit 1
           fi
