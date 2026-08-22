@@ -10,6 +10,11 @@ on:
         description: 'Only send a test push to this user email'
         required: false
         type: string
+      broadcast_test:
+        description: 'Send a test push to all subscribed devices'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   send-reminders:
@@ -86,5 +91,32 @@ jobs:
           echo "OneSignal recipients: $(echo "$RESPONSE" | jq -r '.recipients // 0')"
           if ! echo "$RESPONSE" | jq -e '.id' >/dev/null 2>&1; then
             echo "OneSignal rejected the targeted test request"
+            exit 1
+          fi
+
+      - name: Send broadcast test notification
+        if: github.event_name == 'workflow_dispatch' && inputs.broadcast_test == true
+        env:
+          ONESIGNAL_API_KEY: \${{ secrets.ONESIGNAL_API_KEY }}
+          ONESIGNAL_APP_ID: \${{ secrets.ONESIGNAL_APP_ID }}
+        run: |
+          RESPONSE=$(curl -sS -X POST https://api.onesignal.com/notifications \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Key $ONESIGNAL_API_KEY" \
+            -d "{
+              \"app_id\": \"$ONESIGNAL_APP_ID\",
+              \"included_segments\": [\"Subscribed Users\"],
+              \"target_channel\": \"push\",
+              \"headings\": {\"en\": \"VocabMaster test\"},
+              \"contents\": {\"en\": \"Thông báo test VocabMaster. Nếu bạn thấy tin này, push notification đang hoạt động!\"},
+              \"url\": \"https://vocabulary.click\",
+              \"ttl\": 3600,
+              \"priority\": 10
+            }")
+
+          echo "$RESPONSE"
+          echo "OneSignal recipients: $(echo "$RESPONSE" | jq -r '.recipients // 0')"
+          if ! echo "$RESPONSE" | jq -e '.id' >/dev/null 2>&1; then
+            echo "OneSignal rejected the broadcast test request"
             exit 1
           fi
