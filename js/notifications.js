@@ -248,17 +248,24 @@ const Notifications = {
         const reminderTime = settings.reminderTime || '20:00';
         console.log('Updating OneSignal tags:', { reminder_enabled: reminderEnabled, reminder_time: reminderTime });
 
-        try {
-            await oneSignal.User.addTags({
-                reminder_enabled: reminderEnabled ? 'true' : 'false',
-                reminder_time: reminderTime
-            });
-            console.log('Reminder tags updated successfully');
-            return true;
-        } catch (error) {
-            console.error('Error updating reminder tags:', error);
-            return false;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                await oneSignal.User.addTags({
+                    reminder_enabled: reminderEnabled ? 'true' : 'false',
+                    reminder_time: reminderTime
+                });
+                console.log('Reminder tags updated successfully');
+                return true;
+            } catch (error) {
+                console.warn('Reminder tag sync attempt ' + attempt + ' failed:', error);
+                if (attempt < 3) {
+                    await new Promise(resolve => setTimeout(resolve, attempt * 1500));
+                }
+            }
         }
+
+        console.error('Error updating reminder tags after retries');
+        return false;
     },
     
     // Request native notification permission directly (no custom modal)

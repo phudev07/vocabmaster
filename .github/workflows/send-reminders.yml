@@ -53,7 +53,8 @@ jobs:
             }")
 
           echo "$RESPONSE"
-          if ! echo "$RESPONSE" | jq -e '.id' >/dev/null 2>&1; then
+          echo "OneSignal recipients: $(echo "$RESPONSE" | jq -r '.recipients // 0')"
+          if [ -z "$(echo "$RESPONSE" | jq -r '.id // empty')" ] || [ "$(echo "$RESPONSE" | jq -r '.recipients // 0')" -lt 1 ]; then
             echo "OneSignal rejected the reminder request"
             exit 1
           fi
