@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "vocabmaster-reminders",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-25",
+  "preview_urls": false,
+  "triggers": {
+    "crons": ["*/1 * * * *"]
+  },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true
+    }
+  },
+  "d1_databases": [
+    {
+      "binding": "REMINDERS_DB",
+      "database_name": "vocabmaster-reminders-db",
+      "database_id": "288763e1-51c5-4316-ab86-f3ea9dadbcc0"
+    }
+  ],
+  "vars": {
+    "ONESIGNAL_APP_ID": "098cbdcc-90ec-4af9-84a1-89e53dde4723"
+  }
+}

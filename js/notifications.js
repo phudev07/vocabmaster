@@ -10,6 +10,7 @@ const Notifications = {
     
     // OneSignal App ID
     ONESIGNAL_APP_ID: '098cbdcc-90ec-4af9-84a1-89e53dde4723',
+    REMINDER_WORKER_URL: 'https://vocabmaster-reminders.doanhnghiepphu2k7.workers.dev',
     
     // Initialize OneSignal (call once on app start)
     async init() {
@@ -139,8 +140,39 @@ const Notifications = {
                 subscriptionId
             );
         }
+        if (subscriptionId) await this.syncReminderWorker(subscriptionId);
         if (Auth.isLoggedIn()) await this.tagUser(oneSignal);
         await this.updateReminderTag(oneSignal);
+    },
+
+    // Register the device with the minute-by-minute Cloudflare reminder worker.
+    async syncReminderWorker(subscriptionId, reminderSettings = Storage.getSettings()) {
+        if (!subscriptionId || typeof Auth === 'undefined' || !Auth.isLoggedIn() || !Auth.user?.getIdToken) {
+            return false;
+        }
+
+        try {
+            const idToken = await Auth.user.getIdToken();
+            const response = await fetch(`${this.REMINDER_WORKER_URL}/subscriptions`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${idToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    subscriptionId,
+                    enabled: reminderSettings.reminderEnabled !== false,
+                    reminderTime: reminderSettings.reminderTime || '20:00'
+                })
+            });
+
+            if (!response.ok) throw new Error(`Worker returned ${response.status}`);
+            console.log('Reminder subscription synced to Cloudflare');
+            return true;
+        } catch (error) {
+            console.warn('Cloudflare reminder sync failed:', error);
+            return false;
+        }
     },
     
     // Request permission and register with OneSignal
@@ -471,6 +503,8 @@ const Notifications = {
         settings.reminderEnabled = enabled;
         settings.reminderTime = time;
         Storage.saveSettings(settings);
+        let subscriptionId = null;
+        let oneSignal = null;
         
         // Reschedule local reminder (fallback)
         if (enabled && this.isEnabled()) {
@@ -482,9 +516,8 @@ const Notifications = {
         
         // Save to Firebase (works on all devices including iOS)
         if (typeof FirebaseDB !== 'undefined' && FirebaseDB.initialized && Auth.isLoggedIn()) {
-            let subscriptionId = null;
             try {
-                const oneSignal = await this.waitForOneSignal(15000);
+                oneSignal = await this.waitForOneSignal(15000);
                 subscriptionId = await this.getSubscriptionId(oneSignal);
                 if (!subscriptionId && oneSignal) {
                     subscriptionId = await this.waitForActiveSubscription(oneSignal, 15000);
@@ -504,9 +537,11 @@ const Notifications = {
                 console.warn('Failed to save reminder to Firebase');
             }
         }
+
+        if (subscriptionId) await this.syncReminderWorker(subscriptionId, settings);
         
         // Also try OneSignal tags (works on desktop/Android)
-        const oneSignal = await this.waitForOneSignal(15000);
+        oneSignal = oneSignal || await this.waitForOneSignal(15000);
         if (oneSignal) {
             await this.updateReminderTag(oneSignal);
         } else {
