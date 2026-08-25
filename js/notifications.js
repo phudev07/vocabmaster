@@ -213,10 +213,22 @@ const Notifications = {
 
         try {
             if (oneSignal.login) {
-                try {
-                    await oneSignal.login(Auth.user.uid);
-                } catch (error) {
-                    console.warn('OneSignal identity sync failed:', error);
+                let loggedIn = false;
+                for (let attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                        await oneSignal.login(Auth.user.uid);
+                        loggedIn = true;
+                        break;
+                    } catch (error) {
+                        console.warn('OneSignal identity sync attempt ' + attempt + ' failed:', error);
+                        if (attempt < 3) {
+                            await new Promise(resolve => setTimeout(resolve, attempt * 1500));
+                        }
+                    }
+                }
+                if (!loggedIn) {
+                    console.warn('OneSignal identity sync failed after retries');
+                    return false;
                 }
             }
             const normalizedEmail = (Auth.user.email || '').trim().toLowerCase();
@@ -230,8 +242,10 @@ const Notifications = {
                 await oneSignal.User.addAlias('email', normalizedEmail);
             }
             console.log('User tagged with Firebase UID');
+            return true;
         } catch (error) {
             console.error('Error tagging user:', error);
+            return false;
         }
     },
     
@@ -241,6 +255,19 @@ const Notifications = {
         if (!oneSignal?.User?.addTags) {
             console.log('OneSignal not available for tags');
             return false;
+        }
+
+        if (Auth.isLoggedIn() && oneSignal.login) {
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    await oneSignal.login(Auth.user.uid);
+                    break;
+                } catch (error) {
+                    console.warn('OneSignal login before reminder tags failed:', error);
+                    if (attempt === 3) return false;
+                    await new Promise(resolve => setTimeout(resolve, attempt * 1500));
+                }
+            }
         }
 
         const settings = Storage.getSettings();
@@ -457,8 +484,14 @@ const Notifications = {
         if (typeof FirebaseDB !== 'undefined' && FirebaseDB.initialized && Auth.isLoggedIn()) {
             let subscriptionId = null;
             try {
-                const oneSignal = await this.waitForOneSignal(3000);
+                const oneSignal = await this.waitForOneSignal(15000);
                 subscriptionId = await this.getSubscriptionId(oneSignal);
+                if (!subscriptionId && oneSignal) {
+                    subscriptionId = await this.waitForActiveSubscription(oneSignal, 15000);
+                }
+                if (oneSignal && Auth.isLoggedIn()) {
+                    await this.tagUser(oneSignal);
+                }
             } catch (e) {
                 console.error('Error getting OneSignal subscription ID:', e);
             }
@@ -473,7 +506,12 @@ const Notifications = {
         }
         
         // Also try OneSignal tags (works on desktop/Android)
-        await this.updateReminderTag();
+        const oneSignal = await this.waitForOneSignal(15000);
+        if (oneSignal) {
+            await this.updateReminderTag(oneSignal);
+        } else {
+            console.warn('OneSignal was not ready while saving reminder settings');
+        }
         
         console.log('Reminder settings saved:', { enabled, time });
     },
