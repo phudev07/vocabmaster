@@ -74,6 +74,8 @@ const Auth = {
                         if (typeof Notifications !== 'undefined') {
                             (async () => {
                                 try {
+                                    // Register scheduled reminders as soon as Firebase restores the user.
+                                    await Notifications.syncReminderWorker(null);
                                     await Notifications.init();
                                     const oneSignal = await Notifications.waitForOneSignal(10000);
                                     if (oneSignal) {
