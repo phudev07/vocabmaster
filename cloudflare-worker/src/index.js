@@ -98,11 +98,13 @@ async function registerSubscription(request, env) {
     try {
         const userId = await verifyFirebaseToken(bearer.slice(7));
         const body = await request.json();
-        const subscriptionId = typeof body.subscriptionId === 'string' ? body.subscriptionId.trim() : '';
+        const providedSubscriptionId = typeof body.subscriptionId === 'string' ? body.subscriptionId.trim() : '';
         const reminderTime = typeof body.reminderTime === 'string' ? body.reminderTime : '';
-        if (!subscriptionId || !/^([01]\d|2[0-3]):[0-5]\d$/.test(reminderTime)) {
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(reminderTime)) {
             return json({ error: 'Invalid reminder settings' }, 400, origin);
         }
+        // iOS occasionally hides the subscription ID; OneSignal's external ID stays stable.
+        const subscriptionId = providedSubscriptionId || `external:${userId}`;
 
         await env.REMINDERS_DB.prepare(`
             INSERT INTO reminder_subscriptions (user_id, subscription_id, enabled, reminder_time, updated_at)
@@ -120,7 +122,13 @@ async function registerSubscription(request, env) {
     }
 }
 
-async function sendPush(env, subscriptionIds) {
+async function sendPush(env, subscriptionIds, externalIds) {
+    const targets = subscriptionIds.length > 0 ? {
+        include_subscription_ids: subscriptionIds
+    } : {
+        include_aliases: { external_id: externalIds },
+        target_channel: 'push'
+    };
     const response = await fetch(ONE_SIGNAL_URL, {
         method: 'POST',
         headers: {
@@ -129,7 +137,7 @@ async function sendPush(env, subscriptionIds) {
         },
         body: JSON.stringify({
             app_id: env.ONESIGNAL_APP_ID,
-            include_subscription_ids: subscriptionIds,
+            ...targets,
             headings: { en: 'VocabMaster' },
             contents: { en: 'Đã đến giờ ôn tập từ vựng! Hãy dành 5 phút để học nhé.' },
             url: 'https://vocabulary.click',
@@ -155,7 +163,14 @@ async function sendDueReminders(env) {
 
     for (let index = 0; index < results.length; index += 1000) {
         const batch = results.slice(index, index + 1000);
-        await sendPush(env, batch.map(row => row.subscription_id));
+        const subscriptionIds = batch
+            .filter(row => !row.subscription_id.startsWith('external:'))
+            .map(row => row.subscription_id);
+        const externalIds = batch
+            .filter(row => row.subscription_id.startsWith('external:'))
+            .map(row => row.subscription_id.slice('external:'.length));
+        if (subscriptionIds.length > 0) await sendPush(env, subscriptionIds, []);
+        if (externalIds.length > 0) await sendPush(env, [], externalIds);
         await env.REMINDERS_DB.batch(batch.map(row => env.REMINDERS_DB.prepare(`
             UPDATE reminder_subscriptions SET last_sent_date = ?
             WHERE user_id = ? AND subscription_id = ?

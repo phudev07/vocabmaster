@@ -140,14 +140,14 @@ const Notifications = {
                 subscriptionId
             );
         }
-        if (subscriptionId) await this.syncReminderWorker(subscriptionId);
-        if (Auth.isLoggedIn()) await this.tagUser(oneSignal);
+        const identitySynced = Auth.isLoggedIn() && await this.tagUser(oneSignal);
+        if (subscriptionId || identitySynced) await this.syncReminderWorker(subscriptionId);
         await this.updateReminderTag(oneSignal);
     },
 
     // Register the device with the minute-by-minute Cloudflare reminder worker.
     async syncReminderWorker(subscriptionId, reminderSettings = Storage.getSettings()) {
-        if (!subscriptionId || typeof Auth === 'undefined' || !Auth.isLoggedIn() || !Auth.user?.getIdToken) {
+        if (typeof Auth === 'undefined' || !Auth.isLoggedIn() || !Auth.user?.getIdToken) {
             return false;
         }
 
@@ -160,7 +160,7 @@ const Notifications = {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    subscriptionId,
+                    subscriptionId: subscriptionId || null,
                     enabled: reminderSettings.reminderEnabled !== false,
                     reminderTime: reminderSettings.reminderTime || '20:00'
                 })
@@ -505,6 +505,7 @@ const Notifications = {
         Storage.saveSettings(settings);
         let subscriptionId = null;
         let oneSignal = null;
+        let identitySynced = false;
         
         // Reschedule local reminder (fallback)
         if (enabled && this.isEnabled()) {
@@ -522,7 +523,7 @@ const Notifications = {
                 subscriptionId = await this.waitForActiveSubscription(oneSignal, 15000);
             }
             if (oneSignal && Auth.isLoggedIn()) {
-                await this.tagUser(oneSignal);
+                identitySynced = await this.tagUser(oneSignal);
             }
         } catch (error) {
             console.error('Error getting OneSignal subscription ID:', error);
@@ -538,7 +539,8 @@ const Notifications = {
             }
         }
 
-        const workerSynced = subscriptionId && await this.syncReminderWorker(subscriptionId, settings);
+        const workerSynced = (subscriptionId || identitySynced) &&
+            await this.syncReminderWorker(subscriptionId, settings);
         if (workerSynced) {
             App.showToast(`🔔 Đã lưu nhắc nhở lúc ${time}`, 'success');
         } else if (enabled) {
