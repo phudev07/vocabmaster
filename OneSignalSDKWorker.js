@@ -1,7 +1,7 @@
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
 // Keep the PWA shell available while OneSignal handles push events.
-const CACHE_NAME = 'vocabmaster-v2';
+const CACHE_NAME = 'vocabmaster-v3';
 const APP_SHELL = [
     './',
     './index.html',
@@ -39,13 +39,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys().then((keys) => Promise.all(
-            keys
-                .filter((key) => key !== CACHE_NAME)
-                .map((key) => caches.delete(key))
-        ))
-    );
+    // Preserve existing offline data while the updated app shell is installed.
     self.clients.claim();
 });
 
