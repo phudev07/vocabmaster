@@ -514,31 +514,36 @@ const Notifications = {
             this.reminderTimer = null;
         }
         
+        // Get the push subscription even if Firebase has not finished initializing.
+        try {
+            oneSignal = await this.waitForOneSignal(15000);
+            subscriptionId = await this.getSubscriptionId(oneSignal);
+            if (!subscriptionId && oneSignal) {
+                subscriptionId = await this.waitForActiveSubscription(oneSignal, 15000);
+            }
+            if (oneSignal && Auth.isLoggedIn()) {
+                await this.tagUser(oneSignal);
+            }
+        } catch (error) {
+            console.error('Error getting OneSignal subscription ID:', error);
+        }
+
         // Save to Firebase (works on all devices including iOS)
         if (typeof FirebaseDB !== 'undefined' && FirebaseDB.initialized && Auth.isLoggedIn()) {
-            try {
-                oneSignal = await this.waitForOneSignal(15000);
-                subscriptionId = await this.getSubscriptionId(oneSignal);
-                if (!subscriptionId && oneSignal) {
-                    subscriptionId = await this.waitForActiveSubscription(oneSignal, 15000);
-                }
-                if (oneSignal && Auth.isLoggedIn()) {
-                    await this.tagUser(oneSignal);
-                }
-            } catch (e) {
-                console.error('Error getting OneSignal subscription ID:', e);
-            }
-            
             const saved = await FirebaseDB.saveReminderSettings(enabled, time, subscriptionId);
             if (saved) {
                 console.log('Reminder saved to Firebase with subscription ID:', subscriptionId);
-                App.showToast(`🔔 Đã lưu nhắc nhở lúc ${time}`, 'success');
             } else {
                 console.warn('Failed to save reminder to Firebase');
             }
         }
 
-        if (subscriptionId) await this.syncReminderWorker(subscriptionId, settings);
+        const workerSynced = subscriptionId && await this.syncReminderWorker(subscriptionId, settings);
+        if (workerSynced) {
+            App.showToast(`🔔 Đã lưu nhắc nhở lúc ${time}`, 'success');
+        } else if (enabled) {
+            App.showToast('Chưa đồng bộ được thiết bị. Hãy bấm Đồng bộ thông báo rồi lưu lại.', 'warning');
+        }
         
         // Also try OneSignal tags (works on desktop/Android)
         oneSignal = oneSignal || await this.waitForOneSignal(15000);

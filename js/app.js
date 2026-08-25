@@ -624,10 +624,10 @@ const App = {
             const updateNotifBtn = () => {
                 const permission = Notifications.getPermissionState();
                 if (permission === 'granted') {
-                    enableNotifBtn.textContent = '✅ Đã bật thông báo';
-                    enableNotifBtn.disabled = true;
-                    enableNotifBtn.classList.remove('btn-primary');
-                    enableNotifBtn.classList.add('btn-secondary');
+                    enableNotifBtn.textContent = '🔄 Đồng bộ thông báo';
+                    enableNotifBtn.disabled = false;
+                    enableNotifBtn.classList.remove('btn-secondary');
+                    enableNotifBtn.classList.add('btn-primary');
                 } else if (permission === 'denied') {
                     enableNotifBtn.textContent = '❌ Thông báo bị chặn';
                     enableNotifBtn.disabled = true;
