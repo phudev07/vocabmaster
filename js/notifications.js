@@ -148,12 +148,21 @@ const Notifications = {
 
     // Register the device with the minute-by-minute Cloudflare reminder worker.
     async syncReminderWorker(subscriptionId, reminderSettings = Storage.getSettings()) {
-        if (typeof Auth === 'undefined' || !Auth.isLoggedIn() || !Auth.user?.getIdToken) {
+        if (typeof Auth === 'undefined') {
             return false;
         }
 
         try {
-            const idToken = await Auth.user.getIdToken();
+            // Firebase restores a PWA session asynchronously after the app opens.
+            const deadline = Date.now() + 15000;
+            let user = Auth.user;
+            while (!user?.getIdToken && Date.now() < deadline) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                user = Auth.user;
+            }
+            if (!user?.getIdToken) throw new Error('Sign-in session is not ready');
+
+            const idToken = await user.getIdToken();
             const response = await fetch(`${this.REMINDER_WORKER_URL}/subscriptions`, {
                 method: 'POST',
                 headers: {
@@ -543,6 +552,8 @@ const Notifications = {
         if (workerSynced) {
             App.showToast(`🔔 Đã lưu nhắc nhở lúc ${time}`, 'success');
         } else if (enabled) {
+            // Retry once more after Firebase finishes restoring the app session.
+            setTimeout(() => this.syncReminderWorker(subscriptionId, settings), 5000);
             App.showToast('Chưa đồng bộ được thiết bị. Hãy bấm Đồng bộ thông báo rồi lưu lại.', 'warning');
         }
         
