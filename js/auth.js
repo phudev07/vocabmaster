@@ -75,8 +75,18 @@ const Auth = {
                             (async () => {
                                 try {
                                     await Notifications.init();
-                                    const oneSignal = await Notifications.waitForOneSignal(3000);
-                                    await Notifications.syncSubscription(oneSignal);
+                                    const oneSignal = await Notifications.waitForOneSignal(10000);
+                                    if (oneSignal) {
+                                        await Notifications.syncSubscription(oneSignal);
+                                    } else {
+                                        console.warn('OneSignal was not ready during login sync');
+                                        setTimeout(async () => {
+                                            const retryOneSignal = await Notifications.waitForOneSignal(10000);
+                                            if (retryOneSignal) {
+                                                await Notifications.syncSubscription(retryOneSignal);
+                                            }
+                                        }, 5000);
+                                    }
                                     Notifications.checkAndPrompt();
                                 } catch (e) {
                                     console.error('Error syncing notification subscription on login:', e);
