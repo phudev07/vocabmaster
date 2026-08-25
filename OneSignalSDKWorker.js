@@ -1,7 +1,7 @@
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
 // Keep the PWA shell available while OneSignal handles push events.
-const CACHE_NAME = 'vocabmaster-v3';
+const CACHE_NAME = 'vocabmaster-v4';
 const APP_SHELL = [
     './',
     './index.html',
