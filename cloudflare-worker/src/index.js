@@ -77,7 +77,7 @@ async function verifyFirebaseToken(token) {
         new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
     );
     if (!valid) throw new Error('Firebase token signature is invalid');
-    return claims.sub;
+    return claims;
 }
 
 function vietnamTime() {
@@ -96,15 +96,17 @@ async function registerSubscription(request, env) {
     if (!bearer.startsWith('Bearer ')) return json({ error: 'Sign-in is required' }, 401, origin);
 
     try {
-        const userId = await verifyFirebaseToken(bearer.slice(7));
+        const claims = await verifyFirebaseToken(bearer.slice(7));
+        const userId = claims.sub;
         const body = await request.json();
         const providedSubscriptionId = typeof body.subscriptionId === 'string' ? body.subscriptionId.trim() : '';
         const reminderTime = typeof body.reminderTime === 'string' ? body.reminderTime : '';
         if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(reminderTime)) {
             return json({ error: 'Invalid reminder settings' }, 400, origin);
         }
-        // iOS occasionally hides the subscription ID; OneSignal's external ID stays stable.
-        const subscriptionId = providedSubscriptionId || `external:${userId}`;
+        const email = typeof claims.email === 'string' ? claims.email.trim().toLowerCase() : '';
+        // The email alias works on iOS even when OneSignal hides its subscription ID.
+        const subscriptionId = providedSubscriptionId || (email ? `email:${email}` : `external:${userId}`);
 
         await env.REMINDERS_DB.prepare(`
             INSERT INTO reminder_subscriptions (user_id, subscription_id, enabled, reminder_time, updated_at)
@@ -122,11 +124,11 @@ async function registerSubscription(request, env) {
     }
 }
 
-async function sendPush(env, subscriptionIds, externalIds) {
-    const targets = subscriptionIds.length > 0 ? {
-        include_subscription_ids: subscriptionIds
+async function sendPush(env, targetType, targetIds) {
+    const targets = targetType === 'subscription' ? {
+        include_subscription_ids: targetIds
     } : {
-        include_aliases: { external_id: externalIds },
+        include_aliases: { [targetType]: targetIds },
         target_channel: 'push'
     };
     const response = await fetch(ONE_SIGNAL_URL, {
@@ -164,13 +166,17 @@ async function sendDueReminders(env) {
     for (let index = 0; index < results.length; index += 1000) {
         const batch = results.slice(index, index + 1000);
         const subscriptionIds = batch
-            .filter(row => !row.subscription_id.startsWith('external:'))
+            .filter(row => !row.subscription_id.startsWith('external:') && !row.subscription_id.startsWith('email:'))
             .map(row => row.subscription_id);
         const externalIds = batch
             .filter(row => row.subscription_id.startsWith('external:'))
             .map(row => row.subscription_id.slice('external:'.length));
-        if (subscriptionIds.length > 0) await sendPush(env, subscriptionIds, []);
-        if (externalIds.length > 0) await sendPush(env, [], externalIds);
+        const emails = batch
+            .filter(row => row.subscription_id.startsWith('email:'))
+            .map(row => row.subscription_id.slice('email:'.length));
+        if (subscriptionIds.length > 0) await sendPush(env, 'subscription', subscriptionIds);
+        if (externalIds.length > 0) await sendPush(env, 'external_id', externalIds);
+        if (emails.length > 0) await sendPush(env, 'email', emails);
         await env.REMINDERS_DB.batch(batch.map(row => env.REMINDERS_DB.prepare(`
             UPDATE reminder_subscriptions SET last_sent_date = ?
             WHERE user_id = ? AND subscription_id = ?
