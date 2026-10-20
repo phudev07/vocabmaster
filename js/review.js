@@ -7,6 +7,8 @@ const Review = {
     currentTestIndex: 0,
     correctCount: 0,
     wrongWords: [],
+    isAnswered: false,
+    advanceTimer: null,
 
     // Start review with configuration
     start(words) {
@@ -15,6 +17,9 @@ const Review = {
             return;
         }
 
+        clearTimeout(this.advanceTimer);
+        this.advanceTimer = null;
+        this.isAnswered = false;
         this.words = [...words];
         this.currentTestIndex = 0;
         this.correctCount = 0;
@@ -77,9 +82,12 @@ const Review = {
 
     // Phase 2: Start spelling test for all words
     startSpellingTest() {
+        clearTimeout(this.advanceTimer);
+        this.advanceTimer = null;
         this.currentTestIndex = 0;
         this.correctCount = 0;
         this.wrongWords = [];
+        this.isAnswered = false;
         this.renderTestQuestion();
     },
 
@@ -87,6 +95,8 @@ const Review = {
     renderTestQuestion() {
         const word = this.words[this.currentTestIndex];
         if (!word) return;
+
+        this.isAnswered = false;
 
         const container = document.querySelector('.review-container');
         
@@ -121,7 +131,11 @@ const Review = {
         document.getElementById('checkSpellBtn').addEventListener('click', () => this.checkAnswer());
         document.getElementById('showAnswerBtn').addEventListener('click', () => this.showAnswer(false));
         document.getElementById('speakHintBtn').addEventListener('click', () => Speech.speak(word.english));
-        document.getElementById('closeTestBtn').addEventListener('click', () => App.showView('dashboardView'));
+        document.getElementById('closeTestBtn').addEventListener('click', () => {
+            clearTimeout(this.advanceTimer);
+            this.advanceTimer = null;
+            App.showView('dashboardView');
+        });
     },
 
     // Check spelling answer
@@ -141,6 +155,8 @@ const Review = {
 
     // Show answer and update UI
     showAnswer(isCorrect) {
+        if (this.isAnswered) return;
+        this.isAnswered = true;
         const word = this.words[this.currentTestIndex];
         const input = document.getElementById('spellInput');
         const feedback = document.getElementById('spellFeedback');
@@ -164,7 +180,8 @@ const Review = {
             // Auto advance after 800ms
             actionsDiv.innerHTML = '<span style="color: var(--text-muted)">Đang chuyển...</span>';
             
-            setTimeout(() => {
+            this.advanceTimer = setTimeout(() => {
+                this.advanceTimer = null;
                 if (isLast) {
                     this.showResults();
                 } else {
@@ -197,6 +214,8 @@ const Review = {
 
     // Show final results
     showResults() {
+        clearTimeout(this.advanceTimer);
+        this.advanceTimer = null;
         Stats.recordStudySession(this.words.length);
         
         const wrongCount = this.words.length - this.correctCount;

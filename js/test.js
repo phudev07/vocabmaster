@@ -8,6 +8,8 @@ const Test = {
     correctCount: 0,
     wrongWords: [],
     isAnswered: false,
+    autoAdvancePending: false,
+    advanceTimer: null,
     
     // Listening mode properties
     listeningMode: false,
@@ -20,6 +22,9 @@ const Test = {
             return;
         }
 
+        clearTimeout(this.advanceTimer);
+        this.advanceTimer = null;
+        this.autoAdvancePending = false;
         this.listeningMode = false;
         this.words = this.shuffle([...words]);
         this.currentIndex = 0;
@@ -38,6 +43,9 @@ const Test = {
             return;
         }
 
+        clearTimeout(this.advanceTimer);
+        this.advanceTimer = null;
+        this.autoAdvancePending = false;
         this.listeningMode = true;
         this.words = this.shuffle([...words]);
         this.currentIndex = 0;
@@ -104,12 +112,16 @@ const Test = {
             return;
         }
 
+        clearTimeout(this.advanceTimer);
+        this.advanceTimer = null;
+        this.autoAdvancePending = false;
         this.challengeCallback = onComplete;
         this.words = this.shuffle([...words]);
         this.currentIndex = 0;
         this.correctCount = 0;
         this.wrongWords = [];
         this.isAnswered = false;
+        this.autoAdvancePending = false;
 
         this.render();
         App.showView('testView');
@@ -183,6 +195,9 @@ const Test = {
     // Check answer
     checkAnswer() {
         if (this.isAnswered) {
+            // A correct answer is already scheduled to advance. Ignore any
+            // duplicate click/Enter event instead of advancing a second time.
+            if (this.autoAdvancePending) return;
             // Move to next
             this.next();
             return;
@@ -214,7 +229,10 @@ const Test = {
             document.getElementById('checkAnswerBtn').textContent = 'Đang chuyển...';
             document.getElementById('checkAnswerBtn').disabled = true;
             
-            setTimeout(() => {
+            this.autoAdvancePending = true;
+            this.advanceTimer = setTimeout(() => {
+                this.advanceTimer = null;
+                this.autoAdvancePending = false;
                 this.next();
             }, 800);
         } else {
@@ -255,6 +273,9 @@ const Test = {
 
     // Next question
     next() {
+        clearTimeout(this.advanceTimer);
+        this.advanceTimer = null;
+        this.autoAdvancePending = false;
         if (this.currentIndex < this.words.length - 1) {
             this.currentIndex++;
             this.render();
@@ -316,6 +337,9 @@ const Test = {
         document.getElementById('checkAnswerBtn').addEventListener('click', () => this.checkAnswer());
         document.getElementById('skipWordBtn').addEventListener('click', () => this.skip());
         document.getElementById('closeTestBtn').addEventListener('click', () => {
+            clearTimeout(this.advanceTimer);
+            this.advanceTimer = null;
+            this.autoAdvancePending = false;
             App.showView('dashboardView');
         });
         document.getElementById('backToDashboardBtn').addEventListener('click', () => {
