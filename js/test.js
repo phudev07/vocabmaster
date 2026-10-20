@@ -13,6 +13,7 @@ const Test = {
     
     // Listening mode properties
     listeningMode: false,
+    vietnameseMode: false,
     speakClickCount: 0, // 0=not played, 1=normal, 2=slow, 3=normal, etc.
 
     // Start test with words (normal mode)
@@ -26,6 +27,7 @@ const Test = {
         this.advanceTimer = null;
         this.autoAdvancePending = false;
         this.listeningMode = false;
+        this.vietnameseMode = false;
         this.words = this.shuffle([...words]);
         this.currentIndex = 0;
         this.correctCount = 0;
@@ -47,6 +49,7 @@ const Test = {
         this.advanceTimer = null;
         this.autoAdvancePending = false;
         this.listeningMode = true;
+        this.vietnameseMode = false;
         this.words = this.shuffle([...words]);
         this.currentIndex = 0;
         this.correctCount = 0;
@@ -59,6 +62,28 @@ const Test = {
         
         // Auto play first word
         setTimeout(() => this.speakCurrentWord(), 500);
+    },
+
+    // Start test with the English word as the prompt and Vietnamese as the answer
+    startVietnamese(words) {
+        if (!words || words.length === 0) {
+            App.showToast('Không có từ nào để kiểm tra', 'warning');
+            return;
+        }
+
+        clearTimeout(this.advanceTimer);
+        this.advanceTimer = null;
+        this.autoAdvancePending = false;
+        this.listeningMode = false;
+        this.vietnameseMode = true;
+        this.words = this.shuffle([...words]);
+        this.currentIndex = 0;
+        this.correctCount = 0;
+        this.wrongWords = [];
+        this.isAnswered = false;
+
+        this.render();
+        App.showView('testView');
     },
     
     // Speak current word with speed toggle
@@ -116,6 +141,8 @@ const Test = {
         this.advanceTimer = null;
         this.autoAdvancePending = false;
         this.challengeCallback = onComplete;
+        this.listeningMode = false;
+        this.vietnameseMode = false;
         this.words = this.shuffle([...words]);
         this.currentIndex = 0;
         this.correctCount = 0;
@@ -167,9 +194,9 @@ const Test = {
             const speedLabel = document.getElementById('speakerSpeedLabel');
             if (speedLabel) speedLabel.textContent = '1x';
         } else {
-            // Normal mode: show Vietnamese meaning
+            // Normal mode shows Vietnamese; reverse mode shows the English word.
             testMeaning.style.display = 'block';
-            testMeaning.textContent = word.vietnamese;
+            testMeaning.textContent = this.vietnameseMode ? word.english : word.vietnamese;
             if (testMeaningHidden) testMeaningHidden.style.display = 'none';
             if (listeningControls) listeningControls.style.display = 'none';
         }
@@ -178,6 +205,9 @@ const Test = {
         input.value = '';
         input.className = 'test-input';
         input.disabled = false;
+        input.placeholder = this.vietnameseMode
+            ? 'Nhập nghĩa tiếng Việt...'
+            : 'Nhập từ tiếng Anh...';
         input.focus();
         
         document.getElementById('testFeedback').textContent = '';
@@ -205,8 +235,9 @@ const Test = {
 
         const word = this.words[this.currentIndex];
         const input = document.getElementById('testInput');
-        const answer = input.value.trim().toLowerCase();
-        const correct = word.english.toLowerCase();
+        const answer = input.value.trim().toLocaleLowerCase();
+        const correctAnswer = this.vietnameseMode ? word.vietnamese : word.english;
+        const correct = correctAnswer.trim().toLocaleLowerCase();
         
         const feedback = document.getElementById('testFeedback');
         
@@ -238,7 +269,7 @@ const Test = {
         } else {
             // Wrong - wait for user to continue
             input.className = 'test-input wrong';
-            feedback.textContent = `✗ Đáp án đúng: ${word.english}`;
+            feedback.textContent = `✗ Đáp án đúng: ${correctAnswer}`;
             feedback.className = 'test-feedback wrong';
             
             this.wrongWords.push({

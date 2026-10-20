@@ -339,6 +339,8 @@ const Review = {
             // Test mode
             if (testModeType === 'listening') {
                 Test.startListening(words);
+            } else if (testModeType === 'vietnamese') {
+                Test.startVietnamese(words);
             } else {
                 Test.start(words);
             }
